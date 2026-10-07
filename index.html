@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FFD13B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Timetable">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Interactive Timetable Planner – Neo-Brutalism Edition">
+  <title>Timetable Planner</title>
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiVGltZXRhYmxlIFBsYW5uZXIiLCJzaG9ydF9uYW1lIjoiVGltZXRhYmxlIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNGQkY4RjEiLCJ0aGVtZV9jb2xvciI6IiNGRkQxM0IifQ==">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & Base ────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #FBF8F1;
+      --bg-alt:    #F5F1E9;
+      --black:     #000000;
+      --white:     #FFFFFF;
+      --yellow:    #FFD13B;
+      --green:     #68D391;
+      --blue:      #63B3ED;
+      --pink:      #FC8181;
+      --lilac:     #B794F4;
+      --border:    2.5px solid var(--black);
+      --shadow:    4px 4px 0px var(--black);
+      --shadow-sm: 2px 2px 0px var(--black);
+      --radius:    8px;
+      --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+      --font-mono: 'Space Mono', 'Courier New', monospace;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--black);
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ── App Shell ───────────────────────────────────── */
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 6rem;
+    }
+
+    /* ── Header ──────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 1.4rem;
+    }
+    .header h1 {
+      font-family: var(--font-sans);
+      font-weight: 800;
+      font-size: 2rem;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+    }
+    .header h1 span {
+      background: var(--yellow);
+      padding: 0 6px 2px;
+      border: var(--border);
+      box-shadow: var(--shadow-sm);
+      display: inline-block;
+      transform: rotate(-1.2deg);
+    }
+    .header p {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      margin-top: .55rem;
+      color: #555;
+    }
+
+    /* ── Pill Toggle ─────────────────────────────────── */
+    .toggle-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    .toggle {
+      display: inline-flex;
+      border: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: var(--white);
+    }
+    .toggle button {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .78rem;
+      padding: .55rem 1.3rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      position: relative;
+    }
+    .toggle button + button { border-left: var(--border); }
+    .toggle button.active {
+      background: var(--yellow);
+      color: var(--black);
+    }
+    .toggle button:not(.active):hover { background: #f0ecdf; }
+
+    /* ── Toolbar ──────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: .85rem;
+    }
+    .btn {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      padding: .45rem .85rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform .08s, box-shadow .08s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:active, .btn.pressed {
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn.yellow  { background: var(--yellow); }
+    .btn.green   { background: var(--green); }
+    .btn.pink    { background: var(--pink); }
+    .btn.blue    { background: var(--blue); }
+    .btn.lilac   { background: var(--lilac); }
+
+    /* ── Grid Container ──────────────────────────────── */
+    .grid-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: var(--white);
+    }
+
+    .grid {
+      display: grid;
+      min-width: 680px;
+      /* columns set by JS */
+    }
+
+    /* ── Grid Cells ──────────────────────────────────── */
+    .grid .cell {
+      border-right: 2px solid var(--black);
+      border-bottom: 2px solid var(--black);
+      padding: .45rem .5rem;
+      min-height: 52px;
+      font-size: .78rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+      transition: background .12s;
+      word-break: break-word;
+    }
+    .grid .cell:last-child { border-right: none; }
+
+    .grid .cell:hover { filter: brightness(.96); }
+
+    .cell .cell-title {
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .cell .cell-sub {
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      color: #444;
+      margin-top: 2px;
+      line-height: 1.2;
+    }
+
+    /* ── Header cells ────────────────────────────────── */
+    .cell.hdr {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      background: var(--yellow);
+      text-align: center;
+      cursor: default;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+    .cell.hdr-corner {
+      position: sticky;
+      top: 0;
+      left: 0;
+      z-index: 5;
+      background: var(--yellow);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      text-align: center;
+      cursor: default;
+    }
+    .cell.time-col {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--bg-alt);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      text-align: center;
+      cursor: default;
+      min-width: 82px;
+      white-space: nowrap;
+    }
+
+    /* ── Delete row buttons ──────────────────────────── */
+    .cell.del-col {
+      position: sticky;
+      right: 0;
+      z-index: 2;
+      background: var(--bg-alt);
+      cursor: pointer;
+      text-align: center;
+      font-size: .85rem;
+      min-width: 36px;
+      max-width: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: none;
+    }
+    .cell.del-col:hover { background: var(--pink); }
+    .cell.hdr-del {
+      position: sticky;
+      right: 0;
+      top: 0;
+      z-index: 5;
+      background: var(--yellow);
+      min-width: 36px;
+      max-width: 36px;
+      cursor: default;
+      padding: 0;
+      border-right: none;
+    }
+
+    /* ── Modal / Bottom Sheet ────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 90;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: auto; }
+
+    .modal {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%) translateY(100%);
+      width: min(440px, 100%);
+      z-index: 100;
+      background: var(--white);
+      border: var(--border);
+      border-bottom: none;
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -4px 0 var(--black);
+      padding: 1.5rem 1.3rem 2rem;
+      transition: transform .25s cubic-bezier(.22,.68,0,1.04);
+    }
+    .modal.open { transform: translateX(-50%) translateY(0); }
+
+    .modal h2 {
+      font-weight: 800;
+      font-size: 1.15rem;
+      margin-bottom: .15rem;
+    }
+    .modal .modal-sub {
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+
+    .modal label {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      display: block;
+      margin-bottom: .3rem;
+    }
+
+    .modal input[type="text"],
+    .modal textarea {
+      width: 100%;
+      font-family: var(--font-sans);
+      font-size: .85rem;
+      padding: .5rem .6rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      outline: none;
+      margin-bottom: .75rem;
+      background: var(--bg);
+      resize: vertical;
+    }
+    .modal input:focus, .modal textarea:focus {
+      box-shadow: var(--shadow);
+    }
+
+    .color-chips {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .color-chip {
+      width: 34px;
+      height: 34px;
+      border: var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform .1s, box-shadow .1s;
+    }
+    .color-chip:active {
+      transform: translate(2px,2px);
+      box-shadow: none;
+    }
+    .color-chip.selected {
+      outline: 3px solid var(--black);
+      outline-offset: 2px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: .5rem;
+      margin-top: .3rem;
+    }
+    .modal-actions .btn { flex: 1; text-align: center; font-size: .78rem; padding: .55rem; }
+
+    /* ── Add-Time-Slot Modal ─────────────────────────── */
+    .modal input[type="time"] {
+      font-family: var(--font-mono);
+      font-size: .85rem;
+      padding: .5rem .6rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      outline: none;
+      background: var(--bg);
+      margin-bottom: .75rem;
+      width: 100%;
+    }
+
+    /* ── Empty state ─────────────────────────────────── */
+    .empty-note {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: #888;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ── Toast ────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      font-weight: 700;
+      padding: .5rem 1.2rem;
+      background: var(--black);
+      color: var(--white);
+      border-radius: 999px;
+      z-index: 200;
+      transition: transform .25s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive tweaks ───────────────────────────── */
+    @media (max-width: 600px) {
+      html { font-size: 14px; }
+      .app { padding: .8rem .5rem 5rem; }
+      .header h1 { font-size: 1.55rem; }
+      .modal { padding: 1.2rem 1rem 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ─── App ───────────────────────────────────────── -->
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1><span>⏰ Timetable</span> Planner</h1>
+      <p>tap a cell to edit · your schedule, saved locally</p>
+    </header>
+
+    <!-- View Switcher -->
+    <div class="toggle-wrap">
+      <div class="toggle" role="tablist">
+        <button class="active" role="tab" data-view="working" aria-selected="true">Working Day</button>
+        <button role="tab" data-view="off" aria-selected="false">Off Day</button>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="btn green" id="btnAdd">＋ Add Time Slot</button>
+      <button class="btn pink" id="btnDeleteMode">🗑 Delete Row</button>
+      <button class="btn lilac" id="btnReset">↺ Reset to Default</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="grid-scroll" id="gridScroll">
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <!-- Overlay -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Cell Edit Modal -->
+  <div class="modal" id="cellModal">
+    <h2>Edit Cell</h2>
+    <p class="modal-sub" id="modalSub">Monday · 07:00 AM</p>
+    <label for="inputTitle">Activity</label>
+    <input type="text" id="inputTitle" placeholder="e.g. Morning Run" maxlength="60">
+    <label for="inputDetail">Detail / Subtitle</label>
+    <textarea id="inputDetail" rows="2" placeholder="e.g. 5 km jog at the park" maxlength="120"></textarea>
+    <label>Color</label>
+    <div class="color-chips" id="colorChips"></div>
+    <div class="modal-actions">
+      <button class="btn pink" id="btnClear">Clear Cell</button>
+      <button class="btn yellow" id="btnSave">Save</button>
+    </div>
+  </div>
+
+  <!-- Add Time Slot Modal -->
+  <div class="modal" id="addModal">
+    <h2>Add Time Slot</h2>
+    <p class="modal-sub">Enter start time for the new row</p>
+    <label for="inputTime">Time</label>
+    <input type="time" id="inputTime" value="12:00">
+    <div class="modal-actions">
+      <button class="btn" id="btnAddCancel">Cancel</button>
+      <button class="btn yellow" id="btnAddConfirm">Add</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* ════════════════════════════════════════════════════
+       DATA & DEFAULTS
+       ════════════════════════════════════════════════════ */
+    const COLORS = ['#FFFFFF','#FFD13B','#68D391','#63B3ED','#FC8181','#B794F4'];
+
+    const WORKING_COLS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const OFF_COLS     = ['Saturday','Sunday'];
+
+    const DEFAULT_WORKING_TIMES = [
+      '07:00','08:00','09:00','10:00','11:00','12:00',
+      '13:00','14:00','15:00','16:00','17:00','18:00',
+      '19:00','20:00','21:00','22:00'
+    ];
+    const DEFAULT_OFF_TIMES = [
+      '08:00','09:00','10:00','11:00','12:00',
+      '13:00','14:00','15:00','16:00','17:00',
+      '18:00','19:00','20:00','21:00','22:00'
+    ];
+
+    /* ── State ─────────────────────────────────────── */
+    let currentView = 'working'; // 'working' | 'off'
+    let deleteMode  = false;
+
+    // Schedules keyed by view
+    let schedules = {
+      working: { times: [...DEFAULT_WORKING_TIMES], cells: {} },
+      off:     { times: [...DEFAULT_OFF_TIMES],     cells: {} }
+    };
+
+    // Currently editing
+    let editCol  = null;
+    let editRow  = null;
+    let editColor = COLORS[0];
+
+    /* ════════════════════════════════════════════════════
+       PERSISTENCE
+       ════════════════════════════════════════════════════ */
+    const STORAGE_KEY = 'timetable_v2';
+
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.working && parsed.off) schedules = parsed;
+        }
+      } catch(_) {}
+    }
+
+    /* ════════════════════════════════════════════════════
+       HELPERS
+       ════════════════════════════════════════════════════ */
+    function fmt(time24) {
+      const [h, m] = time24.split(':').map(Number);
+      const suffix = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${suffix}`;
+    }
+
+    function cellKey(col, time) { return `${col}__${time}`; }
+
+    function getCols() { return currentView === 'working' ? WORKING_COLS : OFF_COLS; }
+    function getSched() { return schedules[currentView]; }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => el.classList.remove('show'), 1800);
+    }
+
+    /* ════════════════════════════════════════════════════
+       RENDER GRID
+       ════════════════════════════════════════════════════ */
+    function render() {
+      const grid = document.getElementById('grid');
+      const sched = getSched();
+      const cols = getCols();
+      const numCols = cols.length;
+      // columns: time-col + N days + optional delete col
+      const showDel = deleteMode;
+      const totalCols = 1 + numCols + (showDel ? 1 : 0);
+      grid.style.gridTemplateColumns = `82px repeat(${numCols}, minmax(110px, 1fr))${showDel ? ' 36px' : ''}`;
+      grid.innerHTML = '';
+
+      // ── Header row ──
+      const corner = mkCell('Time', 'hdr-corner');
+      grid.appendChild(corner);
+      cols.forEach(c => {
+        grid.appendChild(mkCell(c, 'hdr'));
+      });
+      if (showDel) {
+        const dh = mkCell('', 'hdr hdr-del');
+        grid.appendChild(dh);
+      }
+
+      // ── Data rows ──
+      sched.times.forEach(time => {
+        // time label
+        const tc = mkCell(fmt(time), 'time-col');
+        grid.appendChild(tc);
+
+        cols.forEach(col => {
+          const key = cellKey(col, time);
+          const data = sched.cells[key] || {};
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.background = data.color || '#FFFFFF';
+          if (data.title) {
+            const t = document.createElement('div');
+            t.className = 'cell-title';
+            t.textContent = data.title;
+            cell.appendChild(t);
+          }
+          if (data.detail) {
+            const s = document.createElement('div');
+            s.className = 'cell-sub';
+            s.textContent = data.detail;
+            cell.appendChild(s);
+          }
+          cell.addEventListener('click', () => openEdit(col, time));
+          grid.appendChild(cell);
+        });
+
+        if (showDel) {
+          const db = document.createElement('div');
+          db.className = 'cell del-col';
+          db.textContent = '✕';
+          db.title = 'Delete ' + fmt(time);
+          db.addEventListener('click', () => deleteRow(time));
+          grid.appendChild(db);
+        }
+      });
+
+      if (sched.times.length === 0) {
+        grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1">No time slots. Tap "+ Add Time Slot" to begin.</div>';
+      }
+    }
+
+    function mkCell(text, cls) {
+      const d = document.createElement('div');
+      d.className = 'cell ' + cls;
+      d.textContent = text;
+      return d;
+    }
+
+    /* ════════════════════════════════════════════════════
+       VIEW TOGGLE
+       ════════════════════════════════════════════════════ */
+    document.querySelectorAll('.toggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.view === currentView) return;
+        currentView = btn.dataset.view;
+        document.querySelectorAll('.toggle button').forEach(b => {
+          b.classList.toggle('active', b === btn);
+          b.setAttribute('aria-selected', b === btn);
+        });
+        deleteMode = false;
+        updateDeleteBtn();
+        render();
+      });
+    });
+
+    /* ════════════════════════════════════════════════════
+       CELL EDIT MODAL
+       ════════════════════════════════════════════════════ */
+    function openEdit(col, time) {
+      editCol = col;
+      editRow = time;
+      const sched = getSched();
+      const key = cellKey(col, time);
+      const data = sched.cells[key] || {};
+
+      document.getElementById('modalSub').textContent = `${col} · ${fmt(time)}`;
+      document.getElementById('inputTitle').value = data.title || '';
+      document.getElementById('inputDetail').value = data.detail || '';
+      editColor = data.color || COLORS[0];
+      renderChips();
+      openModal('cellModal');
+    }
+
+    function renderChips() {
+      const wrap = document.getElementById('colorChips');
+      wrap.innerHTML = '';
+      COLORS.forEach(c => {
+        const chip = document.createElement('div');
+        chip.className = 'color-chip' + (c === editColor ? ' selected' : '');
+        chip.style.background = c;
+        chip.addEventListener('click', () => {
+          editColor = c;
+          renderChips();
+        });
+        wrap.appendChild(chip);
+      });
+    }
+
+    document.getElementById('btnSave').addEventListener('click', () => {
+      const sched = getSched();
+      const key = cellKey(editCol, editRow);
+      const title  = document.getElementById('inputTitle').value.trim();
+      const detail = document.getElementById('inputDetail').value.trim();
+      if (title || detail || editColor !== COLORS[0]) {
+        sched.cells[key] = { title, detail, color: editColor };
+      } else {
+        delete sched.cells[key];
+      }
+      save();
+      closeModal();
+      render();
+      toast('Saved ✓');
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      const sched = getSched();
+      delete sched.cells[cellKey(editCol, editRow)];
+      save();
+      closeModal();
+      render();
+      toast('Cell cleared');
+    });
+
+    /* ════════════════════════════════════════════════════
+       ADD TIME SLOT
+       ════════════════════════════════════════════════════ */
+    document.getElementById('btnAdd').addEventListener('click', () => {
+      document.getElementById('inputTime').value = '12:00';
+      openModal('addModal');
+    });
+
+    document.getElementById('btnAddConfirm').addEventListener('click', () => {
+      const val = document.getElementById('inputTime').value; // "HH:MM"
+      if (!val) return;
+      const sched = getSched();
+      if (sched.times.includes(val)) {
+        toast('Slot already exists');
+        return;
+      }
+      sched.times.push(val);
+      sched.times.sort();
+      save();
+      closeModal();
+      render();
+      toast('Slot added ✓');
+    });
+
+    document.getElementById('btnAddCancel').addEventListener('click', closeModal);
+
+    /* ════════════════════════════════════════════════════
+       DELETE ROW
+       ════════════════════════════════════════════════════ */
+    const btnDel = document.getElementById('btnDeleteMode');
+    function updateDeleteBtn() {
+      btnDel.textContent = deleteMode ? '✓ Done Deleting' : '🗑 Delete Row';
+    }
+    btnDel.addEventListener('click', () => {
+      deleteMode = !deleteMode;
+      updateDeleteBtn();
+      render();
+    });
+
+    function deleteRow(time) {
+      if (!confirm(`Delete the ${fmt(time)} row and its data?`)) return;
+      const sched = getSched();
+      sched.times = sched.times.filter(t => t !== time);
+      // Also remove cell data for that time
+      getCols().forEach(col => { delete sched.cells[cellKey(col, time)]; });
+      save();
+      render();
+      toast('Row deleted');
+    }
+
+    /* ════════════════════════════════════════════════════
+       RESET TO DEFAULT
+       ════════════════════════════════════════════════════ */
+    document.getElementById('btnReset').addEventListener('click', () => {
+      if (!confirm(`Reset the ${currentView === 'working' ? 'Working Day' : 'Off Day'} schedule to defaults? All edits will be lost.`)) return;
+      const defaults = currentView === 'working' ? DEFAULT_WORKING_TIMES : DEFAULT_OFF_TIMES;
+      schedules[currentView] = { times: [...defaults], cells: {} };
+      save();
+      render();
+      toast('Reset ✓');
+    });
+
+    /* ════════════════════════════════════════════════════
+       MODAL HELPERS
+       ════════════════════════════════════════════════════ */
+    let activeModalId = null;
+
+    function openModal(id) {
+      activeModalId = id;
+      document.getElementById('overlay').classList.add('open');
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('overlay').classList.remove('open');
+      if (activeModalId) {
+        document.getElementById(activeModalId).classList.remove('open');
+        activeModalId = null;
+      }
+    }
+
+    document.getElementById('overlay').addEventListener('click', closeModal);
+
+    // close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    /* ════════════════════════════════════════════════════
+       BOOT
+       ════════════════════════════════════════════════════ */
+    load();
+    render();
+  </script>
+</body>
+</html>
