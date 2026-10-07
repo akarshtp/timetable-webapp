@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#FFD13B">
+  <meta name="theme-color" id="metaTheme" content="#FFD13B">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Timetable">
@@ -15,25 +15,53 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    /* ── Reset & Base ────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       RESET & CSS VARIABLES
+       ═══════════════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #FBF8F1;
-      --bg-alt:    #F5F1E9;
-      --black:     #000000;
-      --white:     #FFFFFF;
-      --yellow:    #FFD13B;
-      --green:     #68D391;
-      --blue:      #63B3ED;
-      --pink:      #FC8181;
-      --lilac:     #B794F4;
-      --border:    2.5px solid var(--black);
-      --shadow:    4px 4px 0px var(--black);
-      --shadow-sm: 2px 2px 0px var(--black);
-      --radius:    8px;
-      --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-      --font-mono: 'Space Mono', 'Courier New', monospace;
+      --bg:         #FBF8F1;
+      --bg-alt:     #F5F1E9;
+      --bg-card:    #FFFFFF;
+      --text:       #000000;
+      --text-sub:   #555555;
+      --text-muted: #888888;
+      --border-c:   #000000;
+      --black:      #000000;
+      --white:      #FFFFFF;
+      --yellow:     #FFD13B;
+      --green:      #68D391;
+      --blue:       #63B3ED;
+      --pink:       #FC8181;
+      --lilac:      #B794F4;
+      --cyan:       #00D4FF;
+      --border:     2.5px solid var(--border-c);
+      --shadow:     4px 4px 0px var(--border-c);
+      --shadow-sm:  2px 2px 0px var(--border-c);
+      --radius:     8px;
+      --font-sans:  'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+      --font-mono:  'Space Mono', 'Courier New', monospace;
+      --transition-fast: .12s;
+    }
+
+    /* ── Dark Mode ──────────────────────────────────────── */
+    [data-theme="dark"] {
+      --bg:         #1A1A2E;
+      --bg-alt:     #16213E;
+      --bg-card:    #222244;
+      --text:       #E8E8E8;
+      --text-sub:   #AAAAAA;
+      --text-muted: #777777;
+      --border-c:   #E0E0E0;
+      --white:      #222244;
+      --yellow:     #FFD13B;
+      --green:      #68D391;
+      --blue:       #63B3ED;
+      --pink:       #FC8181;
+      --lilac:      #B794F4;
+      --shadow:     4px 4px 0px rgba(224,224,224,.25);
+      --shadow-sm:  2px 2px 0px rgba(224,224,224,.25);
     }
 
     html { font-size: 15px; }
@@ -41,23 +69,29 @@
     body {
       font-family: var(--font-sans);
       background: var(--bg);
-      color: var(--black);
+      color: var(--text);
       min-height: 100dvh;
       -webkit-font-smoothing: antialiased;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      transition: background .3s, color .3s;
     }
 
-    /* ── App Shell ───────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       APP SHELL
+       ═══════════════════════════════════════════════════════ */
     .app {
       max-width: 1100px;
       margin: 0 auto;
       padding: 1.2rem 1rem 6rem;
     }
 
-    /* ── Header ──────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       HEADER
+       ═══════════════════════════════════════════════════════ */
     .header {
       text-align: center;
-      margin-bottom: 1.4rem;
+      margin-bottom: 1rem;
+      position: relative;
     }
     .header h1 {
       font-family: var(--font-sans);
@@ -66,10 +100,11 @@
       letter-spacing: -0.5px;
       line-height: 1.15;
     }
-    .header h1 span {
+    .header h1 .brand {
       background: var(--yellow);
+      color: #000;
       padding: 0 6px 2px;
-      border: var(--border);
+      border: 2.5px solid #000;
       box-shadow: var(--shadow-sm);
       display: inline-block;
       transform: rotate(-1.2deg);
@@ -78,14 +113,48 @@
       font-family: var(--font-mono);
       font-size: .72rem;
       margin-top: .55rem;
-      color: #555;
+      color: var(--text-sub);
     }
 
-    /* ── Pill Toggle ─────────────────────────────────── */
+    /* Header action buttons (top-right cluster) */
+    .header-actions {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      gap: .4rem;
+      align-items: center;
+    }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform .08s, box-shadow .08s;
+      user-select: none;
+      line-height: 1;
+    }
+    .icon-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       VIEW TOGGLE (Pill)
+       ═══════════════════════════════════════════════════════ */
     .toggle-wrap {
       display: flex;
       justify-content: center;
-      margin-bottom: 1.25rem;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1rem;
     }
     .toggle {
       display: inline-flex;
@@ -93,90 +162,161 @@
       border-radius: 999px;
       overflow: hidden;
       box-shadow: var(--shadow);
-      background: var(--white);
+      background: var(--bg-card);
     }
     .toggle button {
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: .78rem;
-      padding: .55rem 1.3rem;
+      font-size: .76rem;
+      padding: .5rem 1.2rem;
       border: none;
       background: transparent;
+      color: var(--text);
       cursor: pointer;
       transition: background .15s, color .15s;
-      position: relative;
     }
     .toggle button + button { border-left: var(--border); }
     .toggle button.active {
       background: var(--yellow);
-      color: var(--black);
+      color: #000;
     }
-    .toggle button:not(.active):hover { background: #f0ecdf; }
+    .toggle button:not(.active):hover { background: var(--bg-alt); }
 
-    /* ── Toolbar ──────────────────────────────────────── */
+    .btn-now {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .68rem;
+      padding: .42rem .7rem;
+      border: var(--border);
+      border-radius: 999px;
+      background: var(--cyan);
+      color: #000;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform .08s, box-shadow .08s;
+      white-space: nowrap;
+    }
+    .btn-now:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TOOLBAR (Undo/Redo only now)
+       ═══════════════════════════════════════════════════════ */
     .toolbar {
       display: flex;
-      gap: .5rem;
+      gap: .4rem;
       flex-wrap: wrap;
-      margin-bottom: .85rem;
+      margin-bottom: .75rem;
+      align-items: center;
     }
     .btn {
       font-family: var(--font-mono);
       font-weight: 700;
       font-size: .72rem;
-      padding: .45rem .85rem;
+      padding: .42rem .8rem;
       border: var(--border);
       border-radius: var(--radius);
-      background: var(--white);
+      background: var(--bg-card);
+      color: var(--text);
       box-shadow: var(--shadow);
       cursor: pointer;
       transition: transform .08s, box-shadow .08s;
       user-select: none;
       white-space: nowrap;
     }
-    .btn:active, .btn.pressed {
+    .btn:active {
       transform: translate(2px, 2px);
       box-shadow: var(--shadow-sm);
     }
-    .btn.yellow  { background: var(--yellow); }
-    .btn.green   { background: var(--green); }
-    .btn.pink    { background: var(--pink); }
-    .btn.blue    { background: var(--blue); }
-    .btn.lilac   { background: var(--lilac); }
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+    .btn:disabled:active {
+      transform: none;
+      box-shadow: var(--shadow);
+    }
+    .btn.yellow  { background: var(--yellow); color: #000; }
+    .btn.green   { background: var(--green);  color: #000; }
+    .btn.pink    { background: var(--pink);   color: #000; }
+    .btn.blue    { background: var(--blue);   color: #000; }
+    .btn.lilac   { background: var(--lilac);  color: #000; }
+    .btn.sm      { font-size: .65rem; padding: .3rem .55rem; }
 
-    /* ── Grid Container ──────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       COLOR LEGEND STRIP
+       ═══════════════════════════════════════════════════════ */
+    .legend-strip {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: .85rem;
+      padding: .5rem .6rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      box-shadow: var(--shadow-sm);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border-c);
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       GRID CONTAINER
+       ═══════════════════════════════════════════════════════ */
+    .grid-wrap {
+      position: relative;
+      transition: opacity .2s;
+    }
+    .grid-wrap.fading { opacity: 0; }
+
     .grid-scroll {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       border: var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      background: var(--white);
+      background: var(--bg-card);
     }
 
     .grid {
       display: grid;
-      min-width: 680px;
-      /* columns set by JS */
+      min-width: 600px;
     }
 
-    /* ── Grid Cells ──────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       GRID CELLS
+       ═══════════════════════════════════════════════════════ */
     .grid .cell {
-      border-right: 2px solid var(--black);
-      border-bottom: 2px solid var(--black);
-      padding: .45rem .5rem;
-      min-height: 52px;
-      font-size: .78rem;
+      border-right: 2px solid var(--border-c);
+      border-bottom: 2px solid var(--border-c);
+      padding: .4rem .45rem;
+      min-height: 50px;
+      font-size: .76rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
       cursor: pointer;
-      transition: background .12s;
+      transition: filter .12s;
       word-break: break-word;
+      position: relative;
     }
-    .grid .cell:last-child { border-right: none; }
-
-    .grid .cell:hover { filter: brightness(.96); }
+    .grid .cell:hover { filter: brightness(.95); }
 
     .cell .cell-title {
       font-weight: 700;
@@ -184,23 +324,25 @@
     }
     .cell .cell-sub {
       font-family: var(--font-mono);
-      font-size: .65rem;
-      color: #444;
-      margin-top: 2px;
+      font-size: .6rem;
+      color: var(--text-sub);
+      margin-top: 1px;
       line-height: 1.2;
     }
 
-    /* ── Header cells ────────────────────────────────── */
+    /* Header cells */
     .cell.hdr {
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: .72rem;
+      font-size: .7rem;
       background: var(--yellow);
+      color: #000;
       text-align: center;
       cursor: default;
       position: sticky;
       top: 0;
       z-index: 3;
+      min-height: 38px;
     }
     .cell.hdr-corner {
       position: sticky;
@@ -208,11 +350,13 @@
       left: 0;
       z-index: 5;
       background: var(--yellow);
+      color: #000;
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: .72rem;
+      font-size: .7rem;
       text-align: center;
       cursor: default;
+      min-height: 38px;
     }
     .cell.time-col {
       position: sticky;
@@ -221,45 +365,99 @@
       background: var(--bg-alt);
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: .72rem;
+      font-size: .62rem;
       text-align: center;
       cursor: default;
-      min-width: 82px;
+      min-width: 108px;
       white-space: nowrap;
+      line-height: 1.3;
     }
 
-    /* ── Delete row buttons ──────────────────────────── */
-    .cell.del-col {
-      position: sticky;
-      right: 0;
-      z-index: 2;
-      background: var(--bg-alt);
-      cursor: pointer;
-      text-align: center;
-      font-size: .85rem;
-      min-width: 36px;
-      max-width: 36px;
-      padding: 0;
+    /* ── Selected cell ──────────────────────────────────── */
+    .cell.selected {
+      outline: 3px dashed var(--border-c);
+      outline-offset: -3px;
+      animation: dash-march .6s linear infinite;
+    }
+    @keyframes dash-march {
+      to { outline-color: var(--cyan); }
+    }
+    .cell.bulk-selected {
+      outline: 3px dashed var(--lilac);
+      outline-offset: -3px;
+    }
+
+    /* ── NOW indicator ──────────────────────────────────── */
+    .cell.now-active {
+      animation: pulse-now 1.5s ease-in-out infinite;
+      z-index: 1;
+    }
+    @keyframes pulse-now {
+      0%, 100% { box-shadow: inset 0 0 0 3px var(--cyan); }
+      50%      { box-shadow: inset 0 0 0 3px var(--pink); }
+    }
+    .now-badge {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      font-family: var(--font-mono);
+      font-size: .5rem;
+      font-weight: 700;
+      background: var(--black);
+      color: var(--white);
+      padding: 1px 5px;
+      border-radius: 3px;
+      line-height: 1.3;
+      pointer-events: none;
+    }
+    [data-theme="dark"] .now-badge {
+      background: var(--cyan);
+      color: #000;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       FLOATING ACTION PILL
+       ═══════════════════════════════════════════════════════ */
+    .action-pill {
+      position: fixed;
+      bottom: 1.2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
       display: flex;
       align-items: center;
-      justify-content: center;
-      border-right: none;
+      gap: .4rem;
+      padding: .45rem .65rem;
+      background: var(--bg-card);
+      border: var(--border);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      z-index: 80;
+      transition: transform .25s cubic-bezier(.22,.68,0,1.04);
+      max-width: 95vw;
+      overflow-x: auto;
+      white-space: nowrap;
     }
-    .cell.del-col:hover { background: var(--pink); }
-    .cell.hdr-del {
-      position: sticky;
-      right: 0;
-      top: 0;
-      z-index: 5;
-      background: var(--yellow);
-      min-width: 36px;
-      max-width: 36px;
-      cursor: default;
-      padding: 0;
-      border-right: none;
+    .action-pill.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    .action-pill .pill-info {
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      font-weight: 700;
+      color: var(--text);
+      padding: 0 .3rem;
+      flex-shrink: 0;
+    }
+    .pill-divider {
+      width: 2px;
+      height: 22px;
+      background: var(--border-c);
+      flex-shrink: 0;
     }
 
-    /* ── Modal / Bottom Sheet ────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       OVERLAY & MODALS
+       ═══════════════════════════════════════════════════════ */
     .overlay {
       position: fixed;
       inset: 0;
@@ -276,166 +474,461 @@
       left: 50%;
       bottom: 0;
       transform: translateX(-50%) translateY(100%);
-      width: min(440px, 100%);
+      width: min(460px, 100%);
       z-index: 100;
-      background: var(--white);
+      background: var(--bg-card);
       border: var(--border);
       border-bottom: none;
       border-radius: 18px 18px 0 0;
-      box-shadow: 0 -4px 0 var(--black);
-      padding: 1.5rem 1.3rem 2rem;
+      box-shadow: 0 -4px 0 var(--border-c);
+      padding: 1.4rem 1.2rem 1.8rem;
       transition: transform .25s cubic-bezier(.22,.68,0,1.04);
+      max-height: 85dvh;
+      overflow-y: auto;
     }
     .modal.open { transform: translateX(-50%) translateY(0); }
 
     .modal h2 {
       font-weight: 800;
-      font-size: 1.15rem;
-      margin-bottom: .15rem;
+      font-size: 1.1rem;
+      margin-bottom: .1rem;
     }
     .modal .modal-sub {
       font-family: var(--font-mono);
-      font-size: .68rem;
-      color: #666;
-      margin-bottom: 1rem;
+      font-size: .65rem;
+      color: var(--text-muted);
+      margin-bottom: .85rem;
     }
-
     .modal label {
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: .72rem;
+      font-size: .7rem;
       display: block;
-      margin-bottom: .3rem;
+      margin-bottom: .25rem;
+      color: var(--text);
     }
-
     .modal input[type="text"],
-    .modal textarea {
+    .modal textarea,
+    .modal input[type="time"] {
       width: 100%;
       font-family: var(--font-sans);
-      font-size: .85rem;
-      padding: .5rem .6rem;
+      font-size: .82rem;
+      padding: .45rem .55rem;
       border: var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow-sm);
       outline: none;
-      margin-bottom: .75rem;
+      margin-bottom: .7rem;
       background: var(--bg);
+      color: var(--text);
       resize: vertical;
     }
-    .modal input:focus, .modal textarea:focus {
-      box-shadow: var(--shadow);
-    }
+    .modal input[type="time"] { font-family: var(--font-mono); }
+    .modal input:focus, .modal textarea:focus { box-shadow: var(--shadow); }
 
     .color-chips {
       display: flex;
-      gap: .45rem;
+      gap: .4rem;
       flex-wrap: wrap;
-      margin-bottom: 1rem;
+      margin-bottom: .85rem;
     }
     .color-chip {
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       border: var(--border);
       border-radius: 6px;
       cursor: pointer;
       box-shadow: var(--shadow-sm);
       transition: transform .1s, box-shadow .1s;
+      position: relative;
     }
     .color-chip:active {
       transform: translate(2px,2px);
       box-shadow: none;
     }
     .color-chip.selected {
-      outline: 3px solid var(--black);
+      outline: 3px solid var(--border-c);
       outline-offset: 2px;
+    }
+    .color-chip-label {
+      font-family: var(--font-mono);
+      font-size: .52rem;
+      text-align: center;
+      margin-top: 1px;
+      color: var(--text-sub);
+      width: 32px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .modal-actions {
       display: flex;
-      gap: .5rem;
+      gap: .45rem;
       margin-top: .3rem;
     }
-    .modal-actions .btn { flex: 1; text-align: center; font-size: .78rem; padding: .55rem; }
+    .modal-actions .btn { flex: 1; text-align: center; font-size: .75rem; padding: .5rem; }
 
-    /* ── Add-Time-Slot Modal ─────────────────────────── */
-    .modal input[type="time"] {
+    /* ═══════════════════════════════════════════════════════
+       SETTINGS DRAWER
+       ═══════════════════════════════════════════════════════ */
+    .settings-modal {
+      width: min(480px, 100%);
+    }
+    .settings-section {
+      margin-bottom: 1.2rem;
+    }
+    .settings-section h3 {
       font-family: var(--font-mono);
-      font-size: .85rem;
-      padding: .5rem .6rem;
-      border: var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      outline: none;
-      background: var(--bg);
-      margin-bottom: .75rem;
-      width: 100%;
+      font-weight: 700;
+      font-size: .78rem;
+      margin-bottom: .5rem;
+      padding-bottom: .3rem;
+      border-bottom: 2.5px solid var(--border-c);
     }
 
-    /* ── Empty state ─────────────────────────────────── */
-    .empty-note {
+    .slot-list {
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: .5rem;
+    }
+    .slot-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .35rem .5rem;
+      border: 2px solid var(--border-c);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      font-weight: 700;
+      background: var(--bg);
+    }
+    .slot-item .del-slot {
+      background: var(--pink);
+      color: #000;
+      border: 2px solid var(--border-c);
+      border-radius: 4px;
+      font-size: .65rem;
+      font-weight: 700;
+      padding: .15rem .4rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+    }
+    .slot-item .del-slot:hover { background: #e86565; }
+
+    /* Category label editor */
+    .cat-row {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      margin-bottom: .35rem;
+    }
+    .cat-dot {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border-c);
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .cat-row input {
+      flex: 1;
       font-family: var(--font-mono);
       font-size: .72rem;
-      color: #888;
-      text-align: center;
-      padding: 2rem 1rem;
+      padding: .3rem .4rem;
+      border: 2px solid var(--border-c);
+      border-radius: 5px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
     }
 
-    /* ── Toast ────────────────────────────────────────── */
+    /* Danger zone */
+    .danger-zone {
+      border: 2.5px solid var(--pink);
+      border-radius: var(--radius);
+      padding: .65rem;
+      background: rgba(252,129,129,.08);
+    }
+    .danger-zone .confirm-msg {
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      color: var(--pink);
+      font-weight: 700;
+      margin-top: .4rem;
+      display: none;
+    }
+    .danger-zone .confirm-msg.show { display: flex; gap: .4rem; align-items: center; }
+
+    /* Import/Export section */
+    .io-row {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: .5rem;
+    }
+    .io-textarea {
+      width: 100%;
+      height: 80px;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      padding: .4rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      resize: vertical;
+      margin-bottom: .4rem;
+    }
+
+    /* Dark mode toggle row */
+    .theme-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .theme-row span {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      font-weight: 700;
+    }
+    .theme-toggle {
+      width: 52px;
+      height: 28px;
+      border: var(--border);
+      border-radius: 999px;
+      background: var(--bg-alt);
+      cursor: pointer;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: background .2s;
+    }
+    .theme-toggle.active { background: var(--yellow); }
+    .theme-toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-c);
+      border-radius: 50%;
+      background: var(--bg-card);
+      top: 2px;
+      left: 3px;
+      transition: left .2s;
+    }
+    .theme-toggle.active::after { left: 26px; }
+
+    /* ═══════════════════════════════════════════════════════
+       STATS SUMMARY
+       ═══════════════════════════════════════════════════════ */
+    .stats-card {
+      margin-top: .85rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: var(--bg-card);
+      overflow: hidden;
+    }
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .5rem .7rem;
+      cursor: pointer;
+      background: var(--bg-alt);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .72rem;
+      border-bottom: 2px solid var(--border-c);
+      user-select: none;
+    }
+    .stats-header .chevron {
+      transition: transform .2s;
+      font-size: .8rem;
+    }
+    .stats-header .chevron.open { transform: rotate(180deg); }
+    .stats-body {
+      padding: .6rem .7rem;
+      display: none;
+    }
+    .stats-body.open { display: block; }
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      margin-bottom: .35rem;
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      font-weight: 700;
+    }
+    .stat-dot {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border-c);
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .stat-bar-bg {
+      flex: 1;
+      height: 16px;
+      background: var(--bg);
+      border: 2px solid var(--border-c);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .stat-bar {
+      height: 100%;
+      transition: width .3s;
+    }
+    .stat-label {
+      min-width: 55px;
+      text-align: right;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TOAST
+       ═══════════════════════════════════════════════════════ */
     .toast {
       position: fixed;
       bottom: 1.5rem;
       left: 50%;
       transform: translateX(-50%) translateY(80px);
       font-family: var(--font-mono);
-      font-size: .72rem;
+      font-size: .7rem;
       font-weight: 700;
-      padding: .5rem 1.2rem;
+      padding: .45rem 1.1rem;
       background: var(--black);
       color: var(--white);
       border-radius: 999px;
       z-index: 200;
       transition: transform .25s;
       pointer-events: none;
+      white-space: nowrap;
     }
+    [data-theme="dark"] .toast { background: #E0E0E0; color: #1A1A2E; }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── Responsive tweaks ───────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       EMPTY STATE
+       ═══════════════════════════════════════════════════════ */
+    .empty-note {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       PRINT STYLESHEET
+       ═══════════════════════════════════════════════════════ */
+    @media print {
+      body { background: #fff !important; padding: 0; }
+      .header-actions, .toggle-wrap, .toolbar, .action-pill,
+      .overlay, .modal, .toast, .stats-card, .legend-strip,
+      .btn-now { display: none !important; }
+      .app { padding: .5rem; max-width: 100%; }
+      .header { margin-bottom: .5rem; }
+      .header h1 { font-size: 1.3rem; }
+      .header p::after {
+        content: ' · Printed ' attr(data-print-date);
+      }
+      .grid-scroll {
+        overflow: visible;
+        box-shadow: none;
+        border: 2px solid #000;
+      }
+      .grid { min-width: unset !important; }
+      .grid .cell {
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        min-height: 36px;
+        font-size: .65rem;
+        padding: .25rem .3rem;
+      }
+      .cell.hdr, .cell.hdr-corner { box-shadow: none; }
+      .cell.now-active { animation: none; box-shadow: none; }
+      .now-badge { display: none; }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════════════════ */
     @media (max-width: 600px) {
       html { font-size: 14px; }
-      .app { padding: .8rem .5rem 5rem; }
-      .header h1 { font-size: 1.55rem; }
-      .modal { padding: 1.2rem 1rem 1.6rem; }
+      .app { padding: .7rem .4rem 5rem; }
+      .header h1 { font-size: 1.45rem; }
+      .header-actions { position: static; justify-content: center; margin-top: .5rem; }
+      .modal { padding: 1.1rem .9rem 1.5rem; }
+      .action-pill { bottom: .8rem; }
+      .toggle button { padding: .45rem .9rem; font-size: .7rem; }
     }
   </style>
 </head>
 <body>
-  <!-- ─── App ───────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- APP                                                     -->
+  <!-- ═══════════════════════════════════════════════════════ -->
   <div class="app">
+
     <!-- Header -->
     <header class="header">
-      <h1><span>⏰ Timetable</span> Planner</h1>
-      <p>tap a cell to edit · your schedule, saved locally</p>
+      <h1><span class="brand">⏰ Timetable</span> Planner</h1>
+      <p id="headerSub">tap to select · long‑press to edit · saved locally</p>
+      <div class="header-actions">
+        <button class="icon-btn" id="btnTheme" title="Toggle Dark Mode">☀️</button>
+        <button class="icon-btn" id="btnGear" title="Settings">⚙️</button>
+      </div>
     </header>
 
-    <!-- View Switcher -->
+    <!-- View Toggle + NOW button -->
     <div class="toggle-wrap">
       <div class="toggle" role="tablist">
         <button class="active" role="tab" data-view="working" aria-selected="true">Working Day</button>
         <button role="tab" data-view="off" aria-selected="false">Off Day</button>
       </div>
+      <button class="btn-now" id="btnNow" title="Jump to current time">📍 Now</button>
     </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <button class="btn green" id="btnAdd">＋ Add Time Slot</button>
-      <button class="btn pink" id="btnDeleteMode">🗑 Delete Row</button>
-      <button class="btn lilac" id="btnReset">↺ Reset to Default</button>
+    <!-- Toolbar (Undo/Redo) -->
+    <div class="toolbar" id="toolbar">
+      <button class="btn sm" id="btnUndo" disabled>↩ Undo</button>
+      <button class="btn sm" id="btnRedo" disabled>↪ Redo</button>
     </div>
+
+    <!-- Color Legend Strip -->
+    <div class="legend-strip" id="legendStrip"></div>
 
     <!-- Grid -->
-    <div class="grid-scroll" id="gridScroll">
-      <div class="grid" id="grid"></div>
+    <div class="grid-wrap" id="gridWrap">
+      <div class="grid-scroll" id="gridScroll">
+        <div class="grid" id="grid"></div>
+      </div>
     </div>
+
+    <!-- Stats Summary -->
+    <div class="stats-card" id="statsCard">
+      <div class="stats-header" id="statsToggle">
+        <span>📊 Weekly Summary</span>
+        <span class="chevron" id="statsChevron">▾</span>
+      </div>
+      <div class="stats-body" id="statsBody"></div>
+    </div>
+  </div>
+
+  <!-- Floating Action Pill -->
+  <div class="action-pill" id="actionPill">
+    <span class="pill-info" id="pillInfo">Monday · 09:00</span>
+    <span class="pill-divider"></span>
+    <button class="btn sm yellow" id="pillEdit">✏️ Edit</button>
+    <button class="btn sm green" id="pillCopy">📋 Copy</button>
+    <button class="btn sm lilac" id="pillPaste" style="display:none">📌 Paste</button>
+    <button class="btn sm blue" id="pillBulk">☑ Multi</button>
+    <button class="btn sm" id="pillDeselect">✕</button>
   </div>
 
   <!-- Overlay -->
@@ -443,8 +936,8 @@
 
   <!-- Cell Edit Modal -->
   <div class="modal" id="cellModal">
-    <h2>Edit Cell</h2>
-    <p class="modal-sub" id="modalSub">Monday · 07:00 AM</p>
+    <h2 id="cellModalTitle">Edit Cell</h2>
+    <p class="modal-sub" id="modalSub">Monday · 09:00 – 10:00 AM</p>
     <label for="inputTitle">Activity</label>
     <input type="text" id="inputTitle" placeholder="e.g. Morning Run" maxlength="60">
     <label for="inputDetail">Detail / Subtitle</label>
@@ -452,34 +945,103 @@
     <label>Color</label>
     <div class="color-chips" id="colorChips"></div>
     <div class="modal-actions">
-      <button class="btn pink" id="btnClear">Clear Cell</button>
+      <button class="btn pink" id="btnClear">Clear</button>
       <button class="btn yellow" id="btnSave">Save</button>
     </div>
   </div>
 
-  <!-- Add Time Slot Modal -->
-  <div class="modal" id="addModal">
-    <h2>Add Time Slot</h2>
-    <p class="modal-sub">Enter start time for the new row</p>
-    <label for="inputTime">Time</label>
-    <input type="time" id="inputTime" value="12:00">
-    <div class="modal-actions">
-      <button class="btn" id="btnAddCancel">Cancel</button>
-      <button class="btn yellow" id="btnAddConfirm">Add</button>
+  <!-- Settings Modal -->
+  <div class="modal settings-modal" id="settingsModal">
+    <h2>⚙️ Manage Timetable</h2>
+    <p class="modal-sub">Settings for <span id="settingsViewLabel">Working Day</span></p>
+
+    <!-- Add Time Slot -->
+    <div class="settings-section">
+      <h3>➕ Add Time Slot</h3>
+      <label for="settingsTime">Start Time</label>
+      <input type="time" id="settingsTime" value="12:00">
+      <button class="btn green" id="settingsAddSlot" style="width:100%">Add Slot</button>
+    </div>
+
+    <!-- Manage Rows -->
+    <div class="settings-section">
+      <h3>📋 Manage Time Slots</h3>
+      <div class="slot-list" id="slotList"></div>
+    </div>
+
+    <!-- Categories -->
+    <div class="settings-section">
+      <h3>🎨 Color Categories</h3>
+      <div id="catEditor"></div>
+      <button class="btn yellow" id="settingsSaveCats" style="width:100%;margin-top:.4rem">Save Labels</button>
+    </div>
+
+    <!-- Appearance -->
+    <div class="settings-section">
+      <h3>🌗 Appearance</h3>
+      <div class="theme-row">
+        <span>Dark Mode</span>
+        <div class="theme-toggle" id="themeToggleSwitch"></div>
+      </div>
+    </div>
+
+    <!-- Import / Export -->
+    <div class="settings-section">
+      <h3>💾 Import / Export Data</h3>
+      <div class="io-row">
+        <button class="btn blue" id="btnExportJSON">⬇ Download JSON</button>
+        <button class="btn green" id="btnCopyJSON">📋 Copy to Clipboard</button>
+      </div>
+      <label>Import: Upload File or Paste JSON</label>
+      <div class="io-row">
+        <button class="btn lilac" id="btnUploadJSON">⬆ Upload .json</button>
+      </div>
+      <textarea class="io-textarea" id="importTextarea" placeholder='Paste JSON here...'></textarea>
+      <button class="btn yellow" id="btnImportPaste" style="width:100%">Import from Text</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="settings-section">
+      <h3>⚠️ Danger Zone</h3>
+      <div class="danger-zone">
+        <button class="btn pink" id="btnResetFirst" style="width:100%">Reset Timetable to Default</button>
+        <div class="confirm-msg" id="resetConfirm">
+          <span>Are you sure?</span>
+          <button class="btn pink" id="btnResetYes">Yes, Reset</button>
+          <button class="btn" id="btnResetNo">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:.5rem">
+      <button class="btn" id="settingsClose" style="width:100%">Close Settings</button>
     </div>
   </div>
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- JAVASCRIPT                                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
   <script>
-    /* ════════════════════════════════════════════════════
-       DATA & DEFAULTS
-       ════════════════════════════════════════════════════ */
+    /* ════════════════════════════════════════════════════════
+       CONSTANTS
+       ════════════════════════════════════════════════════════ */
     const COLORS = ['#FFFFFF','#FFD13B','#68D391','#63B3ED','#FC8181','#B794F4'];
+    const DEFAULT_CATEGORY_LABELS = {
+      '#FFFFFF': 'Free',
+      '#FFD13B': 'Study',
+      '#68D391': 'Exercise',
+      '#63B3ED': 'Work',
+      '#FC8181': 'Important',
+      '#B794F4': 'Personal'
+    };
 
     const WORKING_COLS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
     const OFF_COLS     = ['Saturday','Sunday'];
+    const ALL_DAYS     = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
     const DEFAULT_WORKING_TIMES = [
       '07:00','08:00','09:00','10:00','11:00','12:00',
@@ -492,26 +1054,61 @@
       '18:00','19:00','20:00','21:00','22:00'
     ];
 
-    /* ── State ─────────────────────────────────────── */
-    let currentView = 'working'; // 'working' | 'off'
-    let deleteMode  = false;
+    const STORAGE_KEY  = 'timetable_v2';
+    const THEME_KEY    = 'timetable_theme';
+    const MAX_UNDO     = 30;
+    const LONG_PRESS_MS = 500;
 
-    // Schedules keyed by view
+    /* ════════════════════════════════════════════════════════
+       STATE
+       ════════════════════════════════════════════════════════ */
+    let currentView = 'working';
     let schedules = {
       working: { times: [...DEFAULT_WORKING_TIMES], cells: {} },
-      off:     { times: [...DEFAULT_OFF_TIMES],     cells: {} }
+      off:     { times: [...DEFAULT_OFF_TIMES],     cells: {} },
+      categoryLabels: { ...DEFAULT_CATEGORY_LABELS }
     };
 
-    // Currently editing
-    let editCol  = null;
-    let editRow  = null;
+    // Selection state
+    let selectedCol  = null;
+    let selectedTime = null;
+
+    // Bulk selection
+    let bulkMode = false;
+    let bulkCells = []; // [{col, time}, ...]
+
+    // Copy buffer
+    let clipboardData = null; // {title, detail, color}
+    let pasteMode = false;
+
+    // Edit modal state
+    let editCol   = null;
+    let editRow   = null;
     let editColor = COLORS[0];
 
-    /* ════════════════════════════════════════════════════
-       PERSISTENCE
-       ════════════════════════════════════════════════════ */
-    const STORAGE_KEY = 'timetable_v2';
+    // Undo / Redo stacks
+    let undoStack = [];
+    let redoStack = [];
 
+    // Long-press tracking
+    let longPressTimer = null;
+    let longPressFired = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    // NOW indicator
+    let nowCol  = null;
+    let nowTime = null;
+
+    // Settings reset confirmation
+    let resetConfirmShown = false;
+
+    // Active modal tracking
+    let activeModalId = null;
+
+    /* ════════════════════════════════════════════════════════
+       PERSISTENCE
+       ════════════════════════════════════════════════════════ */
     function save() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
     }
@@ -521,25 +1118,90 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.working && parsed.off) schedules = parsed;
+          if (parsed.working && parsed.off) {
+            schedules.working = parsed.working;
+            schedules.off = parsed.off;
+          }
+          if (parsed.categoryLabels) {
+            schedules.categoryLabels = parsed.categoryLabels;
+          }
         }
       } catch(_) {}
     }
 
-    /* ════════════════════════════════════════════════════
+    /* ════════════════════════════════════════════════════════
+       UNDO / REDO
+       ════════════════════════════════════════════════════════ */
+    function pushUndo() {
+      undoStack.push(JSON.parse(JSON.stringify(schedules)));
+      if (undoStack.length > MAX_UNDO) undoStack.shift();
+      redoStack = [];
+      updateUndoButtons();
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      redoStack.push(JSON.parse(JSON.stringify(schedules)));
+      const prev = undoStack.pop();
+      schedules = prev;
+      save();
+      render();
+      updateUndoButtons();
+      toast('Undone ↩');
+    }
+
+    function redo() {
+      if (!redoStack.length) return;
+      undoStack.push(JSON.parse(JSON.stringify(schedules)));
+      const next = redoStack.pop();
+      schedules = next;
+      save();
+      render();
+      updateUndoButtons();
+      toast('Redone ↪');
+    }
+
+    function updateUndoButtons() {
+      document.getElementById('btnUndo').disabled = !undoStack.length;
+      document.getElementById('btnRedo').disabled = !redoStack.length;
+    }
+
+    document.getElementById('btnUndo').addEventListener('click', undo);
+    document.getElementById('btnRedo').addEventListener('click', redo);
+
+    /* ════════════════════════════════════════════════════════
        HELPERS
-       ════════════════════════════════════════════════════ */
-    function fmt(time24) {
+       ════════════════════════════════════════════════════════ */
+    function fmt12(time24) {
       const [h, m] = time24.split(':').map(Number);
       const suffix = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 || 12;
       return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${suffix}`;
     }
 
-    function cellKey(col, time) { return `${col}__${time}`; }
+    function fmtRange(time24, nextTime24) {
+      const [h1, m1] = time24.split(':').map(Number);
+      let h2, m2;
+      if (nextTime24) {
+        [h2, m2] = nextTime24.split(':').map(Number);
+      } else {
+        h2 = h1 + 1; m2 = m1;
+        if (h2 >= 24) h2 = 23;
+      }
+      const s1 = h1 >= 12 ? 'PM' : 'AM';
+      const s2 = h2 >= 12 ? 'PM' : 'AM';
+      const a = `${String(h1 % 12 || 12).padStart(2,'0')}:${String(m1).padStart(2,'0')}`;
+      const b = `${String(h2 % 12 || 12).padStart(2,'0')}:${String(m2).padStart(2,'0')}`;
+      if (s1 === s2) return `${a} – ${b} ${s2}`;
+      return `${a} ${s1} – ${b} ${s2}`;
+    }
 
+    function cellKey(col, time) { return `${col}__${time}`; }
     function getCols() { return currentView === 'working' ? WORKING_COLS : OFF_COLS; }
     function getSched() { return schedules[currentView]; }
+    function getCatLabel(color) {
+      return (schedules.categoryLabels && schedules.categoryLabels[color]) || '';
+    }
 
     function toast(msg) {
       const el = document.getElementById('toast');
@@ -549,35 +1211,60 @@
       toast._t = setTimeout(() => el.classList.remove('show'), 1800);
     }
 
-    /* ════════════════════════════════════════════════════
+    function timeToMinutes(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       DARK MODE
+       ════════════════════════════════════════════════════════ */
+    function loadTheme() {
+      const t = localStorage.getItem(THEME_KEY) || 'light';
+      applyTheme(t);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('btnTheme').textContent = theme === 'dark' ? '🌙' : '☀️';
+      document.getElementById('metaTheme').content = theme === 'dark' ? '#1A1A2E' : '#FFD13B';
+      const sw = document.getElementById('themeToggleSwitch');
+      if (sw) sw.classList.toggle('active', theme === 'dark');
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    function toggleTheme() {
+      const curr = document.documentElement.getAttribute('data-theme');
+      applyTheme(curr === 'dark' ? 'light' : 'dark');
+    }
+
+    document.getElementById('btnTheme').addEventListener('click', toggleTheme);
+    document.getElementById('themeToggleSwitch').addEventListener('click', toggleTheme);
+
+    /* ════════════════════════════════════════════════════════
        RENDER GRID
-       ════════════════════════════════════════════════════ */
+       ════════════════════════════════════════════════════════ */
     function render() {
       const grid = document.getElementById('grid');
       const sched = getSched();
       const cols = getCols();
       const numCols = cols.length;
-      // columns: time-col + N days + optional delete col
-      const showDel = deleteMode;
-      const totalCols = 1 + numCols + (showDel ? 1 : 0);
-      grid.style.gridTemplateColumns = `82px repeat(${numCols}, minmax(110px, 1fr))${showDel ? ' 36px' : ''}`;
+
+      grid.style.gridTemplateColumns = `108px repeat(${numCols}, minmax(105px, 1fr))`;
       grid.innerHTML = '';
 
-      // ── Header row ──
+      // Header row
       const corner = mkCell('Time', 'hdr-corner');
       grid.appendChild(corner);
-      cols.forEach(c => {
-        grid.appendChild(mkCell(c, 'hdr'));
-      });
-      if (showDel) {
-        const dh = mkCell('', 'hdr hdr-del');
-        grid.appendChild(dh);
-      }
+      cols.forEach(c => grid.appendChild(mkCell(c, 'hdr')));
 
-      // ── Data rows ──
-      sched.times.forEach(time => {
-        // time label
-        const tc = mkCell(fmt(time), 'time-col');
+      // Data rows
+      sched.times.forEach((time, idx) => {
+        const nextTime = sched.times[idx + 1] || null;
+        const rangeLabel = fmtRange(time, nextTime);
+
+        const tc = mkCell(rangeLabel, 'time-col');
+        tc.dataset.time = time;
         grid.appendChild(tc);
 
         cols.forEach(col => {
@@ -586,6 +1273,9 @@
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.style.background = data.color || '#FFFFFF';
+          cell.dataset.col = col;
+          cell.dataset.time = time;
+
           if (data.title) {
             const t = document.createElement('div');
             t.className = 'cell-title';
@@ -598,23 +1288,59 @@
             s.textContent = data.detail;
             cell.appendChild(s);
           }
-          cell.addEventListener('click', () => openEdit(col, time));
+
+          // Selected state
+          if (!bulkMode && selectedCol === col && selectedTime === time) {
+            cell.classList.add('selected');
+          }
+          if (bulkMode && bulkCells.some(bc => bc.col === col && bc.time === time)) {
+            cell.classList.add('bulk-selected');
+          }
+
+          // NOW indicator
+          if (nowCol === col && nowTime === time) {
+            cell.classList.add('now-active');
+            const badge = document.createElement('span');
+            badge.className = 'now-badge';
+            badge.textContent = 'NOW';
+            cell.appendChild(badge);
+          }
+
+          // ── Interaction: tap & long-press ──
+          cell.addEventListener('mousedown', e => startLongPress(col, time, e));
+          cell.addEventListener('mouseup', () => cancelLongPress());
+          cell.addEventListener('mouseleave', () => cancelLongPress());
+
+          cell.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            startLongPress(col, time, e);
+          }, { passive: true });
+          cell.addEventListener('touchmove', e => {
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > 10 || dy > 10) cancelLongPress();
+          }, { passive: true });
+          cell.addEventListener('touchend', e => {
+            cancelLongPress();
+          });
+
+          cell.addEventListener('click', e => {
+            if (longPressFired) { longPressFired = false; return; }
+            handleCellTap(col, time);
+          });
+
           grid.appendChild(cell);
         });
-
-        if (showDel) {
-          const db = document.createElement('div');
-          db.className = 'cell del-col';
-          db.textContent = '✕';
-          db.title = 'Delete ' + fmt(time);
-          db.addEventListener('click', () => deleteRow(time));
-          grid.appendChild(db);
-        }
       });
 
       if (sched.times.length === 0) {
-        grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1">No time slots. Tap "+ Add Time Slot" to begin.</div>';
+        grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1">No time slots. Open ⚙️ Settings to add slots.</div>';
       }
+
+      renderLegend();
+      renderStats();
+      updateActionPill();
     }
 
     function mkCell(text, cls) {
@@ -624,34 +1350,193 @@
       return d;
     }
 
-    /* ════════════════════════════════════════════════════
-       VIEW TOGGLE
-       ════════════════════════════════════════════════════ */
-    document.querySelectorAll('.toggle button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.view === currentView) return;
-        currentView = btn.dataset.view;
-        document.querySelectorAll('.toggle button').forEach(b => {
-          b.classList.toggle('active', b === btn);
-          b.setAttribute('aria-selected', b === btn);
-        });
-        deleteMode = false;
-        updateDeleteBtn();
+    /* ════════════════════════════════════════════════════════
+       CELL SELECTION & TAP HANDLING
+       ════════════════════════════════════════════════════════ */
+    function handleCellTap(col, time) {
+      if (bulkMode) {
+        toggleBulkCell(col, time);
+        return;
+      }
+      if (pasteMode) {
+        doPaste(col, time);
+        return;
+      }
+      // Single select
+      if (selectedCol === col && selectedTime === time) {
+        deselectCell();
+      } else {
+        selectedCol = col;
+        selectedTime = time;
         render();
-      });
+      }
+    }
+
+    function deselectCell() {
+      selectedCol = null;
+      selectedTime = null;
+      pasteMode = false;
+      bulkMode = false;
+      bulkCells = [];
+      render();
+    }
+
+    function startLongPress(col, time, e) {
+      longPressFired = false;
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        openEdit(col, time);
+      }, LONG_PRESS_MS);
+    }
+
+    function cancelLongPress() {
+      clearTimeout(longPressTimer);
+    }
+
+    /* ════════════════════════════════════════════════════════
+       ACTION PILL
+       ════════════════════════════════════════════════════════ */
+    function updateActionPill() {
+      const pill = document.getElementById('actionPill');
+      const info = document.getElementById('pillInfo');
+      const pasteBtn = document.getElementById('pillPaste');
+      const copyBtn = document.getElementById('pillCopy');
+      const bulkBtn = document.getElementById('pillBulk');
+      const editBtn = document.getElementById('pillEdit');
+
+      if (bulkMode) {
+        pill.classList.add('show');
+        info.textContent = `${bulkCells.length} cell${bulkCells.length !== 1 ? 's' : ''} selected`;
+        editBtn.textContent = '✏️ Apply';
+        editBtn.style.display = '';
+        copyBtn.style.display = 'none';
+        pasteBtn.style.display = 'none';
+        bulkBtn.textContent = '✓ Done';
+        return;
+      }
+
+      if (selectedCol && selectedTime) {
+        pill.classList.add('show');
+        const sched = getSched();
+        const idx = sched.times.indexOf(selectedTime);
+        const next = sched.times[idx + 1] || null;
+        info.textContent = `📌 ${selectedCol} · ${fmtRange(selectedTime, next)}`;
+        editBtn.textContent = '✏️ Edit';
+        editBtn.style.display = '';
+        copyBtn.style.display = '';
+        pasteBtn.style.display = clipboardData ? '' : 'none';
+        bulkBtn.textContent = '☑ Multi';
+        bulkBtn.style.display = '';
+
+        if (pasteMode) {
+          info.textContent = '📌 Paste mode — tap a cell';
+        }
+      } else {
+        pill.classList.remove('show');
+      }
+    }
+
+    // Edit from pill
+    document.getElementById('pillEdit').addEventListener('click', () => {
+      if (bulkMode && bulkCells.length) {
+        // Open edit for bulk apply
+        editCol = bulkCells[0].col;
+        editRow = bulkCells[0].time;
+        editColor = COLORS[0];
+        document.getElementById('cellModalTitle').textContent = `Edit ${bulkCells.length} Cells`;
+        document.getElementById('modalSub').textContent = 'Changes apply to all selected cells';
+        document.getElementById('inputTitle').value = '';
+        document.getElementById('inputDetail').value = '';
+        renderChips();
+        openModal('cellModal');
+        return;
+      }
+      if (selectedCol && selectedTime) {
+        openEdit(selectedCol, selectedTime);
+      }
     });
 
-    /* ════════════════════════════════════════════════════
+    // Copy
+    document.getElementById('pillCopy').addEventListener('click', () => {
+      if (!selectedCol || !selectedTime) return;
+      const data = getSched().cells[cellKey(selectedCol, selectedTime)] || {};
+      clipboardData = {
+        title: data.title || '',
+        detail: data.detail || '',
+        color: data.color || COLORS[0]
+      };
+      pasteMode = true;
+      updateActionPill();
+      toast('Copied! Tap a cell to paste');
+    });
+
+    // Paste
+    document.getElementById('pillPaste').addEventListener('click', () => {
+      pasteMode = true;
+      updateActionPill();
+      toast('Tap a cell to paste');
+    });
+
+    function doPaste(col, time) {
+      if (!clipboardData) return;
+      pushUndo();
+      const sched = getSched();
+      sched.cells[cellKey(col, time)] = { ...clipboardData };
+      save();
+      pasteMode = false;
+      selectedCol = col;
+      selectedTime = time;
+      render();
+      toast('Pasted ✓');
+    }
+
+    // Bulk mode
+    document.getElementById('pillBulk').addEventListener('click', () => {
+      if (bulkMode) {
+        // Exit bulk mode
+        bulkMode = false;
+        bulkCells = [];
+        render();
+        return;
+      }
+      bulkMode = true;
+      bulkCells = [];
+      if (selectedCol && selectedTime) {
+        bulkCells.push({ col: selectedCol, time: selectedTime });
+      }
+      selectedCol = null;
+      selectedTime = null;
+      render();
+      toast('Tap cells to select multiple');
+    });
+
+    function toggleBulkCell(col, time) {
+      const idx = bulkCells.findIndex(bc => bc.col === col && bc.time === time);
+      if (idx >= 0) {
+        bulkCells.splice(idx, 1);
+      } else {
+        bulkCells.push({ col, time });
+      }
+      render();
+    }
+
+    // Deselect
+    document.getElementById('pillDeselect').addEventListener('click', deselectCell);
+
+    /* ════════════════════════════════════════════════════════
        CELL EDIT MODAL
-       ════════════════════════════════════════════════════ */
+       ════════════════════════════════════════════════════════ */
     function openEdit(col, time) {
       editCol = col;
       editRow = time;
       const sched = getSched();
       const key = cellKey(col, time);
       const data = sched.cells[key] || {};
+      const idx = sched.times.indexOf(time);
+      const next = sched.times[idx + 1] || null;
 
-      document.getElementById('modalSub').textContent = `${col} · ${fmt(time)}`;
+      document.getElementById('cellModalTitle').textContent = 'Edit Cell';
+      document.getElementById('modalSub').textContent = `${col} · ${fmtRange(time, next)}`;
       document.getElementById('inputTitle').value = data.title || '';
       document.getElementById('inputDetail').value = data.detail || '';
       editColor = data.color || COLORS[0];
@@ -663,22 +1548,53 @@
       const wrap = document.getElementById('colorChips');
       wrap.innerHTML = '';
       COLORS.forEach(c => {
+        const container = document.createElement('div');
+        container.style.display = 'inline-flex';
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'center';
+
         const chip = document.createElement('div');
         chip.className = 'color-chip' + (c === editColor ? ' selected' : '');
         chip.style.background = c;
-        chip.addEventListener('click', () => {
-          editColor = c;
-          renderChips();
-        });
-        wrap.appendChild(chip);
+        chip.addEventListener('click', () => { editColor = c; renderChips(); });
+        container.appendChild(chip);
+
+        const label = document.createElement('div');
+        label.className = 'color-chip-label';
+        label.textContent = getCatLabel(c);
+        container.appendChild(label);
+
+        wrap.appendChild(container);
       });
     }
 
     document.getElementById('btnSave').addEventListener('click', () => {
-      const sched = getSched();
-      const key = cellKey(editCol, editRow);
+      pushUndo();
       const title  = document.getElementById('inputTitle').value.trim();
       const detail = document.getElementById('inputDetail').value.trim();
+
+      if (bulkMode && bulkCells.length) {
+        // Apply to all bulk-selected cells
+        const sched = getSched();
+        bulkCells.forEach(bc => {
+          const key = cellKey(bc.col, bc.time);
+          if (title || detail || editColor !== COLORS[0]) {
+            sched.cells[key] = { title, detail, color: editColor };
+          } else {
+            delete sched.cells[key];
+          }
+        });
+        save();
+        closeModal();
+        bulkMode = false;
+        bulkCells = [];
+        render();
+        toast('Applied to all ✓');
+        return;
+      }
+
+      const sched = getSched();
+      const key = cellKey(editCol, editRow);
       if (title || detail || editColor !== COLORS[0]) {
         sched.cells[key] = { title, detail, color: editColor };
       } else {
@@ -691,7 +1607,18 @@
     });
 
     document.getElementById('btnClear').addEventListener('click', () => {
+      pushUndo();
       const sched = getSched();
+      if (bulkMode && bulkCells.length) {
+        bulkCells.forEach(bc => { delete sched.cells[cellKey(bc.col, bc.time)]; });
+        save();
+        closeModal();
+        bulkMode = false;
+        bulkCells = [];
+        render();
+        toast('Cells cleared');
+        return;
+      }
       delete sched.cells[cellKey(editCol, editRow)];
       save();
       closeModal();
@@ -699,73 +1626,450 @@
       toast('Cell cleared');
     });
 
-    /* ════════════════════════════════════════════════════
-       ADD TIME SLOT
-       ════════════════════════════════════════════════════ */
-    document.getElementById('btnAdd').addEventListener('click', () => {
-      document.getElementById('inputTime').value = '12:00';
-      openModal('addModal');
+    /* ════════════════════════════════════════════════════════
+       VIEW TOGGLE (with fade transition)
+       ════════════════════════════════════════════════════════ */
+    document.querySelectorAll('.toggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.view === currentView) return;
+        const wrap = document.getElementById('gridWrap');
+        wrap.classList.add('fading');
+        setTimeout(() => {
+          currentView = btn.dataset.view;
+          document.querySelectorAll('.toggle button').forEach(b => {
+            b.classList.toggle('active', b === btn);
+            b.setAttribute('aria-selected', b === btn);
+          });
+          deselectCell();
+          updateNow();
+          render();
+          wrap.classList.remove('fading');
+        }, 200);
+      });
     });
 
-    document.getElementById('btnAddConfirm').addEventListener('click', () => {
-      const val = document.getElementById('inputTime').value; // "HH:MM"
-      if (!val) return;
-      const sched = getSched();
-      if (sched.times.includes(val)) {
-        toast('Slot already exists');
+    /* ════════════════════════════════════════════════════════
+       NOW INDICATOR
+       ════════════════════════════════════════════════════════ */
+    function updateNow() {
+      const now = new Date();
+      const dayIdx = now.getDay(); // 0=Sun
+      const dayName = ALL_DAYS[dayIdx];
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+
+      // Determine which view this day belongs to
+      const isWeekend = dayIdx === 0 || dayIdx === 6;
+      const targetView = isWeekend ? 'off' : 'working';
+
+      // Always compute for the matching view
+      const sched = schedules[targetView];
+      const cols = targetView === 'working' ? WORKING_COLS : OFF_COLS;
+
+      nowCol = null;
+      nowTime = null;
+
+      if (cols.includes(dayName)) {
+        for (let i = 0; i < sched.times.length; i++) {
+          const start = timeToMinutes(sched.times[i]);
+          const end = sched.times[i + 1] ? timeToMinutes(sched.times[i + 1]) : start + 60;
+          if (currentMins >= start && currentMins < end) {
+            nowCol = dayName;
+            nowTime = sched.times[i];
+            break;
+          }
+        }
+      }
+    }
+
+    function scrollToNow() {
+      // If current day doesn't match the view, switch views
+      const now = new Date();
+      const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+      const targetView = isWeekend ? 'off' : 'working';
+
+      if (currentView !== targetView) {
+        currentView = targetView;
+        document.querySelectorAll('.toggle button').forEach(b => {
+          b.classList.toggle('active', b.dataset.view === targetView);
+          b.setAttribute('aria-selected', b.dataset.view === targetView);
+        });
+        updateNow();
+        render();
+      }
+
+      if (!nowTime) {
+        toast('No active slot right now');
         return;
       }
+
+      // Find the cell and scroll
+      const cell = document.querySelector(`.cell.now-active`);
+      if (cell) {
+        cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        toast('📍 Scrolled to now');
+      }
+    }
+
+    document.getElementById('btnNow').addEventListener('click', scrollToNow);
+
+    // Update NOW every 60 seconds
+    setInterval(() => { updateNow(); render(); }, 60000);
+
+    /* ════════════════════════════════════════════════════════
+       COLOR LEGEND
+       ════════════════════════════════════════════════════════ */
+    function renderLegend() {
+      const strip = document.getElementById('legendStrip');
+      strip.innerHTML = '';
+      COLORS.forEach(c => {
+        if (c === '#FFFFFF') return; // skip "free"
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        const dot = document.createElement('div');
+        dot.className = 'legend-dot';
+        dot.style.background = c;
+        item.appendChild(dot);
+        const lbl = document.createElement('span');
+        lbl.textContent = getCatLabel(c) || c;
+        item.appendChild(lbl);
+        strip.appendChild(item);
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       STATS SUMMARY
+       ════════════════════════════════════════════════════════ */
+    let statsOpen = false;
+
+    document.getElementById('statsToggle').addEventListener('click', () => {
+      statsOpen = !statsOpen;
+      document.getElementById('statsBody').classList.toggle('open', statsOpen);
+      document.getElementById('statsChevron').classList.toggle('open', statsOpen);
+    });
+
+    function renderStats() {
+      const body = document.getElementById('statsBody');
+      const sched = getSched();
+      const cols = getCols();
+
+      // Count hours per color
+      const counts = {};
+      COLORS.forEach(c => { counts[c] = 0; });
+      let total = 0;
+
+      sched.times.forEach((time, idx) => {
+        const start = timeToMinutes(time);
+        const end = sched.times[idx + 1] ? timeToMinutes(sched.times[idx + 1]) : start + 60;
+        const hours = (end - start) / 60;
+
+        cols.forEach(col => {
+          const key = cellKey(col, time);
+          const data = sched.cells[key];
+          if (data && data.color) {
+            counts[data.color] = (counts[data.color] || 0) + hours;
+            total += hours;
+          }
+        });
+      });
+
+      if (total === 0) {
+        body.innerHTML = '<div class="empty-note">No activities yet</div>';
+        return;
+      }
+
+      body.innerHTML = '';
+      COLORS.forEach(c => {
+        if (counts[c] <= 0) return;
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+
+        const dot = document.createElement('div');
+        dot.className = 'stat-dot';
+        dot.style.background = c;
+        row.appendChild(dot);
+
+        const name = document.createElement('span');
+        name.textContent = getCatLabel(c) || 'Unnamed';
+        name.style.minWidth = '60px';
+        row.appendChild(name);
+
+        const barBg = document.createElement('div');
+        barBg.className = 'stat-bar-bg';
+        const bar = document.createElement('div');
+        bar.className = 'stat-bar';
+        bar.style.background = c;
+        bar.style.width = Math.round((counts[c] / total) * 100) + '%';
+        barBg.appendChild(bar);
+        row.appendChild(barBg);
+
+        const label = document.createElement('span');
+        label.className = 'stat-label';
+        label.textContent = `${counts[c].toFixed(1)}h`;
+        row.appendChild(label);
+
+        body.appendChild(row);
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       SETTINGS MODAL
+       ════════════════════════════════════════════════════════ */
+    document.getElementById('btnGear').addEventListener('click', () => {
+      openSettings();
+    });
+
+    function openSettings() {
+      document.getElementById('settingsViewLabel').textContent =
+        currentView === 'working' ? 'Working Day' : 'Off Day';
+      renderSlotList();
+      renderCatEditor();
+      resetConfirmShown = false;
+      document.getElementById('resetConfirm').classList.remove('show');
+
+      // Sync theme toggle
+      const theme = document.documentElement.getAttribute('data-theme');
+      document.getElementById('themeToggleSwitch').classList.toggle('active', theme === 'dark');
+
+      openModal('settingsModal');
+    }
+
+    // ── Add Time Slot ──
+    document.getElementById('settingsAddSlot').addEventListener('click', () => {
+      const val = document.getElementById('settingsTime').value;
+      if (!val) return;
+      const sched = getSched();
+      if (sched.times.includes(val)) { toast('Slot already exists'); return; }
+      pushUndo();
       sched.times.push(val);
       sched.times.sort();
       save();
-      closeModal();
+      renderSlotList();
       render();
       toast('Slot added ✓');
     });
 
-    document.getElementById('btnAddCancel').addEventListener('click', closeModal);
-
-    /* ════════════════════════════════════════════════════
-       DELETE ROW
-       ════════════════════════════════════════════════════ */
-    const btnDel = document.getElementById('btnDeleteMode');
-    function updateDeleteBtn() {
-      btnDel.textContent = deleteMode ? '✓ Done Deleting' : '🗑 Delete Row';
+    // ── Slot List ──
+    function renderSlotList() {
+      const list = document.getElementById('slotList');
+      const sched = getSched();
+      list.innerHTML = '';
+      sched.times.forEach((time, idx) => {
+        const next = sched.times[idx + 1] || null;
+        const item = document.createElement('div');
+        item.className = 'slot-item';
+        const label = document.createElement('span');
+        label.textContent = fmtRange(time, next);
+        item.appendChild(label);
+        const btn = document.createElement('button');
+        btn.className = 'del-slot';
+        btn.textContent = '✕ Delete';
+        btn.addEventListener('click', () => {
+          if (!confirm(`Delete the ${fmtRange(time, next)} slot and its data?`)) return;
+          pushUndo();
+          sched.times = sched.times.filter(t => t !== time);
+          getCols().forEach(col => { delete sched.cells[cellKey(col, time)]; });
+          save();
+          renderSlotList();
+          render();
+          toast('Row deleted');
+        });
+        item.appendChild(btn);
+        list.appendChild(item);
+      });
+      if (sched.times.length === 0) {
+        list.innerHTML = '<div class="empty-note">No slots</div>';
+      }
     }
-    btnDel.addEventListener('click', () => {
-      deleteMode = !deleteMode;
-      updateDeleteBtn();
-      render();
+
+    // ── Category Editor ──
+    function renderCatEditor() {
+      const editor = document.getElementById('catEditor');
+      editor.innerHTML = '';
+      COLORS.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'cat-row';
+        const dot = document.createElement('div');
+        dot.className = 'cat-dot';
+        dot.style.background = c;
+        row.appendChild(dot);
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = getCatLabel(c);
+        inp.placeholder = 'Label';
+        inp.maxLength = 20;
+        inp.dataset.color = c;
+        row.appendChild(inp);
+        editor.appendChild(row);
+      });
+    }
+
+    document.getElementById('settingsSaveCats').addEventListener('click', () => {
+      const inputs = document.querySelectorAll('#catEditor input');
+      inputs.forEach(inp => {
+        schedules.categoryLabels[inp.dataset.color] = inp.value.trim();
+      });
+      save();
+      renderLegend();
+      renderStats();
+      renderChips();
+      toast('Labels saved ✓');
     });
 
-    function deleteRow(time) {
-      if (!confirm(`Delete the ${fmt(time)} row and its data?`)) return;
-      const sched = getSched();
-      sched.times = sched.times.filter(t => t !== time);
-      // Also remove cell data for that time
-      getCols().forEach(col => { delete sched.cells[cellKey(col, time)]; });
-      save();
-      render();
-      toast('Row deleted');
-    }
-
-    /* ════════════════════════════════════════════════════
-       RESET TO DEFAULT
-       ════════════════════════════════════════════════════ */
-    document.getElementById('btnReset').addEventListener('click', () => {
-      if (!confirm(`Reset the ${currentView === 'working' ? 'Working Day' : 'Off Day'} schedule to defaults? All edits will be lost.`)) return;
+    // ── Reset ──
+    document.getElementById('btnResetFirst').addEventListener('click', () => {
+      document.getElementById('resetConfirm').classList.add('show');
+    });
+    document.getElementById('btnResetNo').addEventListener('click', () => {
+      document.getElementById('resetConfirm').classList.remove('show');
+    });
+    document.getElementById('btnResetYes').addEventListener('click', () => {
+      pushUndo();
       const defaults = currentView === 'working' ? DEFAULT_WORKING_TIMES : DEFAULT_OFF_TIMES;
       schedules[currentView] = { times: [...defaults], cells: {} };
       save();
+      document.getElementById('resetConfirm').classList.remove('show');
+      renderSlotList();
       render();
       toast('Reset ✓');
     });
 
-    /* ════════════════════════════════════════════════════
-       MODAL HELPERS
-       ════════════════════════════════════════════════════ */
-    let activeModalId = null;
+    // ── Close ──
+    document.getElementById('settingsClose').addEventListener('click', closeModal);
 
+    /* ════════════════════════════════════════════════════════
+       EXPORT / IMPORT
+       ════════════════════════════════════════════════════════ */
+    // Export: Download
+    document.getElementById('btnExportJSON').addEventListener('click', () => {
+      const json = JSON.stringify(schedules, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'timetable-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Backup downloaded ✓');
+    });
+
+    // Export: Copy to clipboard
+    document.getElementById('btnCopyJSON').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(schedules, null, 2));
+        toast('Copied to clipboard ✓');
+      } catch (e) {
+        toast('Copy failed — try download instead');
+      }
+    });
+
+    // Import: File upload
+    document.getElementById('btnUploadJSON').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        importJSON(ev.target.result);
+        e.target.value = ''; // reset file input
+      };
+      reader.readAsText(file);
+    });
+
+    // Import: Paste text
+    document.getElementById('btnImportPaste').addEventListener('click', () => {
+      const text = document.getElementById('importTextarea').value.trim();
+      if (!text) { toast('Paste JSON first'); return; }
+      importJSON(text);
+    });
+
+    function importJSON(raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.working || !parsed.off ||
+            !Array.isArray(parsed.working.times) || !Array.isArray(parsed.off.times)) {
+          toast('Invalid format — missing working/off data');
+          return;
+        }
+        pushUndo();
+        schedules.working = parsed.working;
+        schedules.off = parsed.off;
+        if (parsed.categoryLabels) schedules.categoryLabels = parsed.categoryLabels;
+        save();
+        renderSlotList();
+        render();
+        toast('Imported successfully ✓');
+      } catch (e) {
+        toast('Invalid JSON — parse error');
+      }
+    }
+
+    /* ════════════════════════════════════════════════════════
+       KEYBOARD NAVIGATION
+       ════════════════════════════════════════════════════════ */
+    document.addEventListener('keydown', e => {
+      // Undo / Redo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault(); undo(); return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault(); redo(); return;
+      }
+
+      // Escape
+      if (e.key === 'Escape') {
+        if (activeModalId) { closeModal(); return; }
+        deselectCell();
+        return;
+      }
+
+      // If a modal is open, don't navigate
+      if (activeModalId) return;
+
+      // Arrow keys — move selection
+      if (!selectedCol || !selectedTime) return;
+      const cols = getCols();
+      const sched = getSched();
+      const ci = cols.indexOf(selectedCol);
+      const ti = sched.times.indexOf(selectedTime);
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (ci < cols.length - 1) { selectedCol = cols[ci + 1]; render(); }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (ci > 0) { selectedCol = cols[ci - 1]; render(); }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (ti < sched.times.length - 1) { selectedTime = sched.times[ti + 1]; render(); scrollSelectedIntoView(); }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (ti > 0) { selectedTime = sched.times[ti - 1]; render(); scrollSelectedIntoView(); }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        openEdit(selectedCol, selectedTime);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        pushUndo();
+        delete getSched().cells[cellKey(selectedCol, selectedTime)];
+        save();
+        render();
+        toast('Cell cleared');
+      }
+    });
+
+    function scrollSelectedIntoView() {
+      const cell = document.querySelector('.cell.selected');
+      if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       MODAL HELPERS
+       ════════════════════════════════════════════════════════ */
     function openModal(id) {
       activeModalId = id;
       document.getElementById('overlay').classList.add('open');
@@ -782,16 +2086,37 @@
 
     document.getElementById('overlay').addEventListener('click', closeModal);
 
-    // close on Escape
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
+    // Click outside grid to deselect (but not on pill or modals)
+    document.addEventListener('click', e => {
+      if (activeModalId) return;
+      const pill = document.getElementById('actionPill');
+      if (pill.contains(e.target)) return;
+      const gridScroll = document.getElementById('gridScroll');
+      if (gridScroll.contains(e.target)) return;
+      const toolbar = document.getElementById('toolbar');
+      if (toolbar.contains(e.target)) return;
+      // Clicked elsewhere — deselect
+      if (selectedCol || bulkMode) {
+        deselectCell();
+      }
     });
 
-    /* ════════════════════════════════════════════════════
+    /* ════════════════════════════════════════════════════════
+       PRINT SUPPORT
+       ════════════════════════════════════════════════════════ */
+    window.addEventListener('beforeprint', () => {
+      const sub = document.getElementById('headerSub');
+      sub.dataset.printDate = new Date().toLocaleDateString();
+    });
+
+    /* ════════════════════════════════════════════════════════
        BOOT
-       ════════════════════════════════════════════════════ */
+       ════════════════════════════════════════════════════════ */
     load();
+    loadTheme();
+    updateNow();
     render();
+    updateUndoButtons();
   </script>
 </body>
 </html>
