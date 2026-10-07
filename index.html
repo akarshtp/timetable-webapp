@@ -10,7 +10,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="description" content="Interactive Timetable Planner – Neo-Brutalism Edition">
   <title>Timetable Planner</title>
-  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiVGltZXRhYmxlIFBsYW5uZXIiLCJzaG9ydF9uYW1lIjoiVGltZXRhYmxlIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNGQkY4RjEiLCJ0aGVtZV9jb2xvciI6IiNGRkQxM0IifQ==">
+  <link rel="icon" id="favicon" type="image/svg+xml" href="">
+  <link rel="apple-touch-icon" id="appleTouchIcon" href="">
+  <link rel="manifest" id="manifestLink" href="">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -2110,6 +2112,91 @@
     });
 
     /* ════════════════════════════════════════════════════════
+       ICONS & MANIFEST (Inline SVG Generation)
+       ════════════════════════════════════════════════════════ */
+    function setupIcons() {
+      // ── Favicon SVG (32×32-optimized, 2×2 grid + clock hands) ──
+      const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+        <rect x="8" y="8" width="50" height="50" rx="10" fill="#000"/>
+        <rect x="4" y="4" width="50" height="50" rx="10" fill="#FFD13B" stroke="#000" stroke-width="3"/>
+        <defs><clipPath id="fc"><rect x="5.5" y="5.5" width="47" height="47" rx="8.5"/></clipPath></defs>
+        <g clip-path="url(#fc)">
+          <rect x="30" y="5" width="23" height="24" fill="#68D391"/>
+          <rect x="5" y="30" width="24" height="24" fill="#63B3ED"/>
+          <rect x="30" y="30" width="23" height="24" fill="#B794F4"/>
+          <line x1="30" y1="4" x2="30" y2="55" stroke="#000" stroke-width="2.5"/>
+          <line x1="4" y1="30" x2="55" y2="30" stroke="#000" stroke-width="2.5"/>
+        </g>
+        <line x1="18" y1="18" x2="18" y2="11" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="18" y1="18" x2="24" y2="18" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="18" cy="18" r="1.5" fill="#000"/>
+      </svg>`;
+
+      // ── Touch Icon SVG (180×180, 3×3 grid + clock hands + multi-color) ──
+      const touchSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+        <rect x="12" y="12" width="156" height="156" rx="28" fill="#000"/>
+        <rect x="6" y="6" width="156" height="156" rx="28" fill="#FFD13B" stroke="#000" stroke-width="4"/>
+        <defs><clipPath id="tc"><rect x="8" y="8" width="152" height="152" rx="26"/></clipPath></defs>
+        <g clip-path="url(#tc)">
+          <rect x="59" y="8" width="50" height="50" fill="#68D391"/>
+          <rect x="109" y="59" width="51" height="50" fill="#63B3ED"/>
+          <rect x="8" y="109" width="50" height="51" fill="#B794F4"/>
+          <rect x="109" y="109" width="51" height="51" fill="#FC8181"/>
+          <line x1="59" y1="6" x2="59" y2="162" stroke="#000" stroke-width="3"/>
+          <line x1="109" y1="6" x2="109" y2="162" stroke="#000" stroke-width="3"/>
+          <line x1="6" y1="59" x2="162" y2="59" stroke="#000" stroke-width="3"/>
+          <line x1="6" y1="109" x2="162" y2="109" stroke="#000" stroke-width="3"/>
+        </g>
+        <line x1="34" y1="34" x2="34" y2="18" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="34" y1="34" x2="48" y2="34" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="34" cy="34" r="3" fill="#000"/>
+      </svg>`;
+
+      // ── Set favicon (SVG data URI) ──
+      const faviconDataURI = 'data:image/svg+xml;base64,' + btoa(faviconSVG);
+      document.getElementById('favicon').href = faviconDataURI;
+
+      // ── Generate apple-touch-icon (render SVG → Canvas → PNG) ──
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 180, 180);
+        const pngDataURI = canvas.toDataURL('image/png');
+        document.getElementById('appleTouchIcon').href = pngDataURI;
+
+        // ── Build manifest with icon ──
+        const manifest = {
+          name: 'Timetable Planner',
+          short_name: 'Timetable',
+          start_url: '.',
+          display: 'standalone',
+          background_color: '#FBF8F1',
+          theme_color: '#FFD13B',
+          icons: [
+            {
+              src: faviconDataURI,
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any'
+            },
+            {
+              src: pngDataURI,
+              sizes: '180x180',
+              type: 'image/png',
+              purpose: 'any maskable'
+            }
+          ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+        document.getElementById('manifestLink').href = URL.createObjectURL(manifestBlob);
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(touchSVG);
+    }
+
+    /* ════════════════════════════════════════════════════════
        BOOT
        ════════════════════════════════════════════════════════ */
     load();
@@ -2117,6 +2204,7 @@
     updateNow();
     render();
     updateUndoButtons();
+    setupIcons();
   </script>
 </body>
 </html>
