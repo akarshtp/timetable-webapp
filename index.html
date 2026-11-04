@@ -203,6 +203,67 @@
       box-shadow: none;
     }
 
+    .btn-timer {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .68rem;
+      padding: .42rem .75rem;
+      border: var(--border);
+      border-radius: 999px;
+      background: var(--lilac);
+      color: #000;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform .08s, box-shadow .08s, background .2s;
+      white-space: nowrap;
+    }
+    .btn-timer:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+    .btn-timer.running {
+      animation: pulse-timer 1.5s ease-in-out infinite;
+      background: var(--green);
+    }
+    @keyframes pulse-timer {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.05); }
+    }
+
+    .today-progress {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-family: var(--font-mono);
+      font-size: .66rem;
+      font-weight: 700;
+      padding: .3rem .55rem;
+      border: var(--border);
+      border-radius: 999px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow-sm);
+      color: var(--text);
+      user-select: none;
+    }
+    .today-progress-fill {
+      width: 42px;
+      height: 7px;
+      background: var(--bg-alt);
+      border: 1.5px solid var(--border-c);
+      border-radius: 999px;
+      overflow: hidden;
+      display: inline-block;
+    }
+    .today-progress-bar {
+      height: 100%;
+      background: var(--green);
+      transition: width .25s ease;
+    }
+    .sync-btn-toolbar {
+      font-size: .65rem;
+      margin-left: auto;
+    }
+
     /* ═══════════════════════════════════════════════════════
        TOOLBAR (Undo/Redo only now)
        ═══════════════════════════════════════════════════════ */
@@ -416,6 +477,127 @@
       background: var(--cyan);
       color: #000;
     }
+
+    /* ── Done / Check-off cell ──────────────────────────── */
+    .cell.is-done {
+      opacity: 0.62;
+    }
+    .cell.is-done .cell-title {
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      color: var(--text-muted);
+    }
+    .cell-check {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-c);
+      border-radius: 4px;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 1px 1px 0px var(--border-c);
+      transition: transform .08s, background .12s;
+      z-index: 2;
+      color: transparent;
+      user-select: none;
+      padding: 0;
+      line-height: 1;
+    }
+    .cell-check:hover { transform: scale(1.15); }
+    .cell-check:active { transform: scale(0.9); }
+    .cell-check.checked {
+      background: var(--green);
+      color: #000;
+    }
+
+    /* ── Focus Timer Modal ──────────────────────────────── */
+    .focus-modal {
+      text-align: center;
+    }
+    .focus-presets {
+      display: flex;
+      justify-content: center;
+      gap: .35rem;
+      margin-bottom: .85rem;
+      flex-wrap: wrap;
+    }
+    .focus-preset-btn {
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      font-weight: 700;
+      padding: .3rem .6rem;
+      border: 2px solid var(--border-c);
+      border-radius: 999px;
+      background: var(--bg);
+      cursor: pointer;
+      color: var(--text);
+      box-shadow: 1px 1px 0px var(--border-c);
+      transition: transform .08s, background .12s;
+    }
+    .focus-preset-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+    .focus-preset-btn.active {
+      background: var(--yellow);
+      color: #000;
+    }
+    .focus-timer-display {
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 3.4rem;
+      letter-spacing: -1.5px;
+      margin: .4rem 0;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .focus-progress-wrap {
+      width: 100%;
+      height: 14px;
+      background: var(--bg-alt);
+      border: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .focus-progress-bar {
+      height: 100%;
+      width: 100%;
+      background: var(--green);
+      transition: width .3s linear;
+    }
+    .focus-controls {
+      display: flex;
+      gap: .45rem;
+      justify-content: center;
+      margin-bottom: .6rem;
+    }
+    .focus-controls .btn {
+      min-width: 80px;
+    }
+
+    /* ── Cloud Sync Status Badges ───────────────────────── */
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .2rem .55rem;
+      border-radius: 999px;
+      font-size: .62rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      border: 2px solid var(--border-c);
+      margin-bottom: .6rem;
+    }
+    .sync-badge.online { background: #68D391; color: #000; }
+    .sync-badge.offline { background: var(--bg-alt); color: var(--text-muted); }
+    .sync-badge.syncing { background: var(--yellow); color: #000; }
+    .sync-badge.error { background: var(--pink); color: #000; }
 
     /* ═══════════════════════════════════════════════════════
        FLOATING ACTION PILL
@@ -887,19 +1069,22 @@
       </div>
     </header>
 
-    <!-- View Toggle + NOW button -->
+    <!-- View Toggle + NOW button + Focus button -->
     <div class="toggle-wrap">
       <div class="toggle" role="tablist">
         <button class="active" role="tab" data-view="working" aria-selected="true">Working Day</button>
         <button role="tab" data-view="off" aria-selected="false">Off Day</button>
       </div>
       <button class="btn-now" id="btnNow" title="Jump to current time">📍 Now</button>
+      <button class="btn-timer" id="btnFocusTimer" title="Focus Timer & Pomodoro">⏱️ Focus</button>
     </div>
 
-    <!-- Toolbar (Undo/Redo) -->
+    <!-- Toolbar (Undo/Redo & Today's Progress) -->
     <div class="toolbar" id="toolbar">
       <button class="btn sm" id="btnUndo" disabled>↩ Undo</button>
       <button class="btn sm" id="btnRedo" disabled>↪ Redo</button>
+      <div class="today-progress" id="todayProgress" style="display:none"></div>
+      <button class="btn sm sync-btn-toolbar" id="btnToolbarSync" title="Cloud Sync Status">☁️ Sync</button>
     </div>
 
     <!-- Color Legend Strip -->
@@ -927,6 +1112,7 @@
     <span class="pill-info" id="pillInfo">Monday · 09:00</span>
     <span class="pill-divider"></span>
     <button class="btn sm yellow" id="pillEdit">✏️ Edit</button>
+    <button class="btn sm lilac" id="pillFocus">⏱️ Focus</button>
     <button class="btn sm green" id="pillCopy">📋 Copy</button>
     <button class="btn sm lilac" id="pillPaste" style="display:none">📌 Paste</button>
     <button class="btn sm blue" id="pillBulk">☑ Multi</button>
@@ -949,6 +1135,35 @@
     <div class="modal-actions">
       <button class="btn pink" id="btnClear">Clear</button>
       <button class="btn yellow" id="btnSave">Save</button>
+    </div>
+  </div>
+
+  <!-- Focus Timer Modal -->
+  <div class="modal focus-modal" id="focusModal">
+    <h2>⏱️ Focus Timer</h2>
+    <p class="modal-sub" id="focusSub">Current Activity · Slot</p>
+
+    <div class="focus-presets">
+      <button class="focus-preset-btn active" data-mode="slot">Slot Remaining</button>
+      <button class="focus-preset-btn" data-mode="25">25m Pomodoro</button>
+      <button class="focus-preset-btn" data-mode="5">5m Break</button>
+      <button class="focus-preset-btn" data-mode="15">15m Break</button>
+    </div>
+
+    <div class="focus-timer-display" id="timerDisplay">25:00</div>
+
+    <div class="focus-progress-wrap">
+      <div class="focus-progress-bar" id="timerProgressBar"></div>
+    </div>
+
+    <div class="focus-controls">
+      <button class="btn yellow" id="btnTimerToggle">▶ Start</button>
+      <button class="btn" id="btnTimerReset">↺ Reset</button>
+      <button class="btn" id="btnTimerPlus5">+5m</button>
+    </div>
+
+    <div class="modal-actions" style="margin-top:.6rem">
+      <button class="btn" id="focusClose" style="width:100%">Close</button>
     </div>
   </div>
 
@@ -984,6 +1199,48 @@
       <div class="theme-row">
         <span>Dark Mode</span>
         <div class="theme-toggle" id="themeToggleSwitch"></div>
+      </div>
+    </div>
+
+    <!-- Cloud Sync Section -->
+    <div class="settings-section">
+      <h3>☁️ Cloud Sync (Multi-Device)</h3>
+      <p style="font-size: .68rem; margin-bottom: .6rem; color: var(--text-sub);">
+        Sync real-time between your mobile and desktop for free using Google Firebase.
+      </p>
+      <div id="syncStatusBadge" class="sync-badge offline">⚪ Not Connected</div>
+
+      <label for="syncPassphrase">Private Sync Passphrase</label>
+      <input type="text" id="syncPassphrase" placeholder="e.g. akarsh-private-2026" maxlength="50">
+      <p style="font-size: .62rem; color: var(--text-muted); margin-top:-.4rem; margin-bottom:.6rem;">
+        Enter the <strong>exact same passphrase</strong> on your mobile and laptop.
+      </p>
+
+      <div style="margin-bottom: .6rem;">
+        <a href="javascript:void(0)" id="toggleFbConfig" style="font-size: .68rem; font-weight:700; color: var(--blue); font-family: var(--font-mono); text-decoration: underline;">
+          ⚙️ Firebase Setup (One-Time) ▾
+        </a>
+      </div>
+
+      <div id="fbConfigSection" style="display:none; margin-bottom: .7rem;">
+        <label for="fbConfigText">Firebase Config JSON</label>
+        <textarea class="io-textarea" id="fbConfigText" placeholder='Paste your Firebase config here:
+{
+  "apiKey": "AIzaSy...",
+  "databaseURL": "https://your-project-default-rtdb.firebaseio.com",
+  "projectId": "your-project"
+}' style="height:90px"></textarea>
+        <div style="font-size: .62rem; color: var(--text-muted); line-height: 1.4; margin-top:-.2rem;">
+          1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--text); text-decoration:underline;">console.firebase.google.com</a> (100% Free Spark plan).<br>
+          2. Create a project & add a Web App.<br>
+          3. Enable Realtime Database (Test mode with read/write true).<br>
+          4. Copy & paste the firebaseConfig object here.
+        </div>
+      </div>
+
+      <div class="io-row">
+        <button class="btn green" id="btnConnectSync" style="flex:1">Connect & Sync</button>
+        <button class="btn pink" id="btnDisconnectSync" style="display:none; flex:1">Disconnect</button>
       </div>
     </div>
 
@@ -1023,6 +1280,10 @@
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+
+  <!-- Firebase Compat SDK for Free Multi-Device Cloud Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- ═══════════════════════════════════════════════════════ -->
   <!-- JAVASCRIPT                                              -->
@@ -1068,7 +1329,8 @@
     let schedules = {
       working: { times: [...DEFAULT_WORKING_TIMES], cells: {} },
       off:     { times: [...DEFAULT_OFF_TIMES],     cells: {} },
-      categoryLabels: { ...DEFAULT_CATEGORY_LABELS }
+      categoryLabels: { ...DEFAULT_CATEGORY_LABELS },
+      completed: { date: '', keys: [] }
     };
 
     // Selection state
@@ -1102,6 +1364,25 @@
     let nowCol  = null;
     let nowTime = null;
 
+    // Focus Timer state
+    let timerMode = 'slot'; // 'slot', '25', '5', '15'
+    let timerTotalSec = 25 * 60;
+    let timerRemainingSec = 25 * 60;
+    let timerInterval = null;
+    let timerRunning = false;
+    let timerTargetCol = null;
+    let timerTargetTime = null;
+
+    // Cloud Sync state (Firebase)
+    let fbApp = null;
+    let fbDb = null;
+    let fbRef = null;
+    let fbConnected = false;
+    let isRemoteUpdating = false;
+    let cloudPushTimer = null;
+    const FB_CONFIG_KEY = 'timetable_fb_config';
+    const SYNC_KEY_KEY = 'timetable_sync_key';
+
     // Settings reset confirmation
     let resetConfirmShown = false;
 
@@ -1111,8 +1392,16 @@
     /* ════════════════════════════════════════════════════════
        PERSISTENCE
        ════════════════════════════════════════════════════════ */
-    function save() {
+    function getTodayDateStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function save(skipCloudSync = false) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
+      if (!skipCloudSync) {
+        debouncedCloudPush();
+      }
     }
 
     function load() {
@@ -1127,8 +1416,14 @@
           if (parsed.categoryLabels) {
             schedules.categoryLabels = parsed.categoryLabels;
           }
+          if (parsed.completed && parsed.completed.date === getTodayDateStr()) {
+            schedules.completed = parsed.completed;
+          }
         }
       } catch(_) {}
+      if (!schedules.completed || schedules.completed.date !== getTodayDateStr()) {
+        schedules.completed = { date: getTodayDateStr(), keys: [] };
+      }
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1218,6 +1513,75 @@
       return h * 60 + m;
     }
 
+    function toggleCellDone(key) {
+      pushUndo();
+      if (!schedules.completed || schedules.completed.date !== getTodayDateStr()) {
+        schedules.completed = { date: getTodayDateStr(), keys: [] };
+      }
+      const idx = schedules.completed.keys.indexOf(key);
+      if (idx >= 0) {
+        schedules.completed.keys.splice(idx, 1);
+        toast('Task marked incomplete');
+      } else {
+        schedules.completed.keys.push(key);
+        toast('Task completed! ✓');
+        playChime(660, 0.15);
+      }
+      save();
+      render();
+    }
+
+    function renderTodayProgress() {
+      const el = document.getElementById('todayProgress');
+      if (!el) return;
+      const todayName = ALL_DAYS[new Date().getDay()];
+      const isWeekend = todayName === 'Sunday' || todayName === 'Saturday';
+      const viewToCheck = isWeekend ? 'off' : 'working';
+      const targetSched = schedules[viewToCheck];
+      if (!targetSched) { el.style.display = 'none'; return; }
+
+      let totalTasks = 0;
+      let doneTasks = 0;
+      const completedKeys = (schedules.completed && schedules.completed.date === getTodayDateStr())
+        ? schedules.completed.keys
+        : [];
+
+      targetSched.times.forEach(t => {
+        const k = cellKey(todayName, t);
+        if (targetSched.cells[k] && targetSched.cells[k].title) {
+          totalTasks++;
+          if (completedKeys.includes(k)) doneTasks++;
+        }
+      });
+
+      if (totalTasks === 0) {
+        el.style.display = 'none';
+        return;
+      }
+
+      const pct = Math.round((doneTasks / totalTasks) * 100);
+      el.style.display = 'inline-flex';
+      el.innerHTML = `<span>✓ ${doneTasks}/${totalTasks}</span><span class="today-progress-fill"><span class="today-progress-bar" style="width:${pct}%"></span></span>`;
+      el.title = `Today's Progress: ${doneTasks} of ${totalTasks} completed (${pct}%)`;
+    }
+
+    function playChime(freq = 587.33, dur = 0.5) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + dur * 0.4);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + dur);
+      } catch(_) {}
+    }
+
     /* ════════════════════════════════════════════════════════
        DARK MODE
        ════════════════════════════════════════════════════════ */
@@ -1299,12 +1663,42 @@
             cell.classList.add('bulk-selected');
           }
 
+          // Check-off / Done state for today's column
+          const todayName = ALL_DAYS[new Date().getDay()];
+          const isTodayCol = (col === todayName);
+          const isDone = schedules.completed &&
+                         schedules.completed.date === getTodayDateStr() &&
+                         schedules.completed.keys.includes(key);
+
+          if (isDone) {
+            cell.classList.add('is-done');
+          }
+
+          if (isTodayCol && data.title) {
+            const checkBtn = document.createElement('button');
+            checkBtn.className = 'cell-check' + (isDone ? ' checked' : '');
+            checkBtn.title = isDone ? 'Mark as Incomplete' : 'Mark as Done';
+            checkBtn.textContent = '✓';
+            checkBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              toggleCellDone(key);
+            });
+            cell.appendChild(checkBtn);
+          }
+
           // NOW indicator
           if (nowCol === col && nowTime === time) {
             cell.classList.add('now-active');
             const badge = document.createElement('span');
             badge.className = 'now-badge';
             badge.textContent = 'NOW';
+            badge.title = 'Click to open Focus Timer';
+            badge.style.pointerEvents = 'auto';
+            badge.style.cursor = 'pointer';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openFocusTimer(col, time);
+            });
             cell.appendChild(badge);
           }
 
@@ -1342,6 +1736,7 @@
 
       renderLegend();
       renderStats();
+      renderTodayProgress();
       updateActionPill();
     }
 
@@ -1405,12 +1800,14 @@
       const copyBtn = document.getElementById('pillCopy');
       const bulkBtn = document.getElementById('pillBulk');
       const editBtn = document.getElementById('pillEdit');
+      const focusBtn = document.getElementById('pillFocus');
 
       if (bulkMode) {
         pill.classList.add('show');
         info.textContent = `${bulkCells.length} cell${bulkCells.length !== 1 ? 's' : ''} selected`;
         editBtn.textContent = '✏️ Apply';
         editBtn.style.display = '';
+        if (focusBtn) focusBtn.style.display = 'none';
         copyBtn.style.display = 'none';
         pasteBtn.style.display = 'none';
         bulkBtn.textContent = '✓ Done';
@@ -1425,6 +1822,7 @@
         info.textContent = `📌 ${selectedCol} · ${fmtRange(selectedTime, next)}`;
         editBtn.textContent = '✏️ Edit';
         editBtn.style.display = '';
+        if (focusBtn) focusBtn.style.display = '';
         copyBtn.style.display = '';
         pasteBtn.style.display = clipboardData ? '' : 'none';
         bulkBtn.textContent = '☑ Multi';
@@ -1524,6 +1922,15 @@
 
     // Deselect
     document.getElementById('pillDeselect').addEventListener('click', deselectCell);
+
+    // Focus from pill
+    document.getElementById('pillFocus').addEventListener('click', () => {
+      if (selectedCol && selectedTime) {
+        openFocusTimer(selectedCol, selectedTime);
+      } else {
+        openFocusTimer(nowCol, nowTime);
+      }
+    });
 
     /* ════════════════════════════════════════════════════════
        CELL EDIT MODAL
@@ -1828,6 +2235,21 @@
       resetConfirmShown = false;
       document.getElementById('resetConfirm').classList.remove('show');
 
+      // Populate cloud sync inputs
+      const savedPass = localStorage.getItem(SYNC_KEY_KEY) || '';
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
+      const passInp = document.getElementById('syncPassphrase');
+      const cfgInp = document.getElementById('fbConfigText');
+      if (passInp) passInp.value = savedPass;
+      if (cfgInp) cfgInp.value = savedConfig;
+      if (fbConnected) {
+        document.getElementById('btnConnectSync').style.display = 'none';
+        document.getElementById('btnDisconnectSync').style.display = '';
+      } else {
+        document.getElementById('btnConnectSync').style.display = '';
+        document.getElementById('btnDisconnectSync').style.display = 'none';
+      }
+
       // Sync theme toggle
       const theme = document.documentElement.getAttribute('data-theme');
       document.getElementById('themeToggleSwitch').classList.toggle('active', theme === 'dark');
@@ -2104,6 +2526,371 @@
     });
 
     /* ════════════════════════════════════════════════════════
+       FOCUS TIMER
+       ════════════════════════════════════════════════════════ */
+    function openFocusTimer(col, time) {
+      timerTargetCol = col || nowCol;
+      timerTargetTime = time || nowTime;
+
+      const sub = document.getElementById('focusSub');
+      if (timerTargetCol && timerTargetTime) {
+        const sched = getSched();
+        const k = cellKey(timerTargetCol, timerTargetTime);
+        const data = (sched.cells && sched.cells[k]) || {};
+        const idx = sched.times.indexOf(timerTargetTime);
+        const next = sched.times[idx + 1] || null;
+        const title = data.title || 'Focus Session';
+        sub.textContent = `${title} (${timerTargetCol} · ${fmtRange(timerTargetTime, next)})`;
+      } else {
+        sub.textContent = 'Free Focus Session';
+      }
+
+      if (!timerRunning) {
+        setTimerMode(timerMode || 'slot');
+      } else {
+        updateTimerUI();
+      }
+
+      openModal('focusModal');
+    }
+
+    function setTimerMode(mode) {
+      timerMode = mode;
+      document.querySelectorAll('.focus-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+
+      if (mode === 'slot') {
+        const now = new Date();
+        const currentSec = now.getSeconds();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        let slotEndMins = currentMins + 60;
+        if (timerTargetTime) {
+          const sched = getSched();
+          const idx = sched.times.indexOf(timerTargetTime);
+          if (idx >= 0) {
+            const next = sched.times[idx + 1];
+            slotEndMins = next ? timeToMinutes(next) : timeToMinutes(timerTargetTime) + 60;
+          }
+        }
+        const diffSec = (slotEndMins - currentMins) * 60 - currentSec;
+        timerTotalSec = Math.max(60, diffSec > 0 ? diffSec : 60 * 60);
+        timerRemainingSec = timerTotalSec;
+      } else {
+        const mins = parseInt(mode, 10);
+        timerTotalSec = mins * 60;
+        timerRemainingSec = timerTotalSec;
+      }
+
+      pauseTimer();
+      updateTimerUI();
+    }
+
+    function startTimer() {
+      if (timerRunning) return;
+      timerRunning = true;
+      const toggleBtn = document.getElementById('btnTimerToggle');
+      if (toggleBtn) {
+        toggleBtn.textContent = '⏸ Pause';
+        toggleBtn.classList.remove('yellow');
+        toggleBtn.classList.add('pink');
+      }
+      const focusBtn = document.getElementById('btnFocusTimer');
+      if (focusBtn) focusBtn.classList.add('running');
+
+      timerInterval = setInterval(() => {
+        if (timerRemainingSec > 0) {
+          timerRemainingSec--;
+          updateTimerUI();
+        } else {
+          finishTimer();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      const toggleBtn = document.getElementById('btnTimerToggle');
+      if (toggleBtn) {
+        toggleBtn.textContent = '▶ Start';
+        toggleBtn.classList.remove('pink');
+        toggleBtn.classList.add('yellow');
+      }
+      const focusBtn = document.getElementById('btnFocusTimer');
+      if (focusBtn) focusBtn.classList.remove('running');
+      document.title = 'Timetable Planner';
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      setTimerMode(timerMode);
+    }
+
+    function add5Minutes() {
+      timerRemainingSec += 300;
+      timerTotalSec = Math.max(timerTotalSec, timerRemainingSec);
+      updateTimerUI();
+    }
+
+    function updateTimerUI() {
+      const m = Math.floor(timerRemainingSec / 60);
+      const s = timerRemainingSec % 60;
+      const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      const display = document.getElementById('timerDisplay');
+      if (display) display.textContent = formatted;
+
+      const pct = timerTotalSec > 0 ? Math.round((timerRemainingSec / timerTotalSec) * 100) : 0;
+      const bar = document.getElementById('timerProgressBar');
+      if (bar) bar.style.width = pct + '%';
+
+      const focusBtn = document.getElementById('btnFocusTimer');
+      if (timerRunning) {
+        document.title = `(${formatted}) Timetable Planner`;
+        if (focusBtn) focusBtn.textContent = `⏱️ ${formatted}`;
+      } else {
+        if (focusBtn) focusBtn.textContent = '⏱️ Focus';
+      }
+    }
+
+    function finishTimer() {
+      pauseTimer();
+      playChime(784, 0.8);
+      toast('🔔 Focus session complete!');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('⏰ Focus Session Done!', { body: 'Great job completing your session!' });
+        } catch(_) {}
+      }
+      updateTimerUI();
+    }
+
+    document.getElementById('btnFocusTimer').addEventListener('click', () => {
+      openFocusTimer(nowCol, nowTime);
+    });
+
+    document.getElementById('focusClose').addEventListener('click', closeModal);
+
+    document.getElementById('btnTimerToggle').addEventListener('click', () => {
+      if (timerRunning) pauseTimer();
+      else startTimer();
+    });
+
+    document.getElementById('btnTimerReset').addEventListener('click', resetTimer);
+    document.getElementById('btnTimerPlus5').addEventListener('click', add5Minutes);
+
+    document.querySelectorAll('.focus-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setTimerMode(btn.dataset.mode);
+      });
+    });
+
+    /* ════════════════════════════════════════════════════════
+       CLOUD SYNC (FIREBASE REALTIME DATABASE)
+       ════════════════════════════════════════════════════════ */
+    function parseFirebaseConfig(raw) {
+      if (!raw) return null;
+      raw = raw.trim();
+      try {
+        return JSON.parse(raw);
+      } catch(_) {}
+
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          const jsonStr = match[0]
+            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+            .replace(/'/g, '"')
+            .replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(jsonStr);
+        } catch(_) {}
+      }
+      return null;
+    }
+
+    function updateSyncUI(status, label) {
+      const badge = document.getElementById('syncStatusBadge');
+      const tbBtn = document.getElementById('btnToolbarSync');
+      if (badge) {
+        badge.className = 'sync-badge ' + status;
+        badge.textContent = label;
+      }
+      if (tbBtn) {
+        if (status === 'online') {
+          tbBtn.textContent = '☁️ Synced';
+          tbBtn.className = 'btn sm green sync-btn-toolbar';
+        } else if (status === 'syncing') {
+          tbBtn.textContent = '☁️ Syncing...';
+          tbBtn.className = 'btn sm yellow sync-btn-toolbar';
+        } else if (status === 'error') {
+          tbBtn.textContent = '☁️ Error';
+          tbBtn.className = 'btn sm pink sync-btn-toolbar';
+        } else {
+          tbBtn.textContent = '☁️ Sync';
+          tbBtn.className = 'btn sm sync-btn-toolbar';
+        }
+      }
+    }
+
+    function initFirebaseSync() {
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY);
+      const savedKey = localStorage.getItem(SYNC_KEY_KEY);
+      if (savedConfig && savedKey) {
+        connectFirebase(savedConfig, savedKey, true);
+      } else {
+        updateSyncUI('offline', '⚪ Not Connected');
+      }
+    }
+
+    function connectFirebase(configRaw, passphrase, silent = false) {
+      if (!window.firebase) {
+        updateSyncUI('error', '🔴 Firebase SDK not loaded');
+        if (!silent) toast('Firebase script not loaded. Check internet.');
+        return;
+      }
+
+      const config = parseFirebaseConfig(configRaw);
+      if (!config || (!config.databaseURL && !config.projectId)) {
+        updateSyncUI('error', '🔴 Invalid Config');
+        if (!silent) toast('Firebase config must include apiKey and projectId');
+        return;
+      }
+      if (!config.databaseURL && config.projectId) {
+        config.databaseURL = `https://${config.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
+      }
+
+      const cleanKey = passphrase.trim().replace(/[.#$\[\]/]/g, '_');
+      if (!cleanKey) {
+        updateSyncUI('error', '🔴 Key Required');
+        if (!silent) toast('Please enter a private sync passphrase');
+        return;
+      }
+
+      try {
+        updateSyncUI('syncing', '🟡 Connecting...');
+        if (!fbApp) {
+          fbApp = firebase.initializeApp(config, 'TimetableSync_' + Date.now());
+        }
+        fbDb = firebase.database(fbApp);
+        fbRef = fbDb.ref('timetables/' + cleanKey);
+
+        localStorage.setItem(FB_CONFIG_KEY, configRaw);
+        localStorage.setItem(SYNC_KEY_KEY, passphrase);
+
+        const btnConnect = document.getElementById('btnConnectSync');
+        const btnDisconnect = document.getElementById('btnDisconnectSync');
+        if (btnConnect) btnConnect.style.display = 'none';
+        if (btnDisconnect) btnDisconnect.style.display = '';
+
+        fbRef.on('value', snapshot => {
+          const remoteData = snapshot.val();
+          if (remoteData && remoteData.working && remoteData.off) {
+            if (isRemoteUpdating) return;
+            isRemoteUpdating = true;
+
+            schedules.working = remoteData.working;
+            schedules.off = remoteData.off;
+            if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+            if (remoteData.completed && remoteData.completed.date === getTodayDateStr()) {
+              schedules.completed = remoteData.completed;
+            }
+
+            save(true);
+            render();
+            updateSyncUI('online', '🟢 Live Synced');
+            if (!silent) toast('Synced from cloud ☁️');
+            setTimeout(() => { isRemoteUpdating = false; }, 300);
+          } else {
+            debouncedCloudPush(true);
+            updateSyncUI('online', '🟢 Live Synced (New Room)');
+          }
+        }, err => {
+          console.error(err);
+          updateSyncUI('error', '🔴 Database Error');
+          toast('Firebase error: Check database rules in console');
+        });
+
+        fbConnected = true;
+        updateSyncUI('online', '🟢 Live Synced');
+        if (!silent) toast('Connected to Cloud Sync ✓');
+      } catch(e) {
+        console.error(e);
+        updateSyncUI('error', '🔴 Connection Error');
+        if (!silent) toast('Failed to connect: ' + e.message);
+      }
+    }
+
+    function disconnectFirebase() {
+      if (fbRef) {
+        try { fbRef.off(); } catch(_) {}
+      }
+      fbConnected = false;
+      fbRef = null;
+      localStorage.removeItem(FB_CONFIG_KEY);
+      localStorage.removeItem(SYNC_KEY_KEY);
+
+      const btnConnect = document.getElementById('btnConnectSync');
+      const btnDisconnect = document.getElementById('btnDisconnectSync');
+      if (btnConnect) btnConnect.style.display = '';
+      if (btnDisconnect) btnDisconnect.style.display = 'none';
+
+      updateSyncUI('offline', '⚪ Not Connected');
+      toast('Disconnected from Cloud Sync');
+    }
+
+    function debouncedCloudPush(immediate = false) {
+      if (!fbConnected || !fbRef || isRemoteUpdating) return;
+      clearTimeout(cloudPushTimer);
+      const pushFn = () => {
+        updateSyncUI('syncing', '🟡 Syncing...');
+        fbRef.set({
+          working: schedules.working,
+          off: schedules.off,
+          categoryLabels: schedules.categoryLabels,
+          completed: schedules.completed,
+          lastModified: Date.now()
+        }).then(() => {
+          updateSyncUI('online', '🟢 Live Synced');
+        }).catch(err => {
+          console.error(err);
+          updateSyncUI('error', '🔴 Sync Failed');
+        });
+      };
+
+      if (immediate) {
+        pushFn();
+      } else {
+        cloudPushTimer = setTimeout(pushFn, 600);
+      }
+    }
+
+    // Cloud sync settings buttons & helpers
+    document.getElementById('btnConnectSync').addEventListener('click', () => {
+      const configVal = document.getElementById('fbConfigText').value.trim();
+      const passVal = document.getElementById('syncPassphrase').value.trim();
+      if (!passVal) { toast('Enter a sync passphrase first'); return; }
+      if (!configVal) {
+        document.getElementById('fbConfigSection').style.display = 'block';
+        toast('Paste your Firebase config');
+        return;
+      }
+      connectFirebase(configVal, passVal);
+    });
+
+    document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
+
+    document.getElementById('toggleFbConfig').addEventListener('click', () => {
+      const sec = document.getElementById('fbConfigSection');
+      sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('btnToolbarSync').addEventListener('click', () => {
+      openSettings();
+      const el = document.getElementById('syncStatusBadge');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    /* ════════════════════════════════════════════════════════
        PRINT SUPPORT
        ════════════════════════════════════════════════════════ */
     window.addEventListener('beforeprint', () => {
@@ -2205,6 +2992,7 @@
     render();
     updateUndoButtons();
     setupIcons();
+    initFirebaseSync();
   </script>
 </body>
 </html>
