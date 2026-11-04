@@ -1223,19 +1223,14 @@
       </div>
 
       <div id="fbConfigSection" style="display:none; margin-bottom: .7rem;">
-        <label for="fbConfigText">Firebase Config JSON</label>
-        <textarea class="io-textarea" id="fbConfigText" placeholder='Paste your Firebase config here:
-{
-  "apiKey": "AIzaSy...",
-  "databaseURL": "https://your-project-default-rtdb.firebaseio.com",
-  "projectId": "your-project"
-}' style="height:90px"></textarea>
-        <div style="font-size: .62rem; color: var(--text-muted); line-height: 1.4; margin-top:-.2rem;">
-          1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--text); text-decoration:underline;">console.firebase.google.com</a> (100% Free Spark plan).<br>
-          2. Create a project & add a Web App.<br>
-          3. Enable Realtime Database (Test mode with read/write true).<br>
-          4. Copy & paste the firebaseConfig object here.
+        <label for="fbDatabaseUrl">Realtime Database URL</label>
+        <input type="text" id="fbDatabaseUrl" placeholder="https://your-project-...firebasedatabase.app" style="margin-bottom:.5rem;">
+        <div style="font-size: .62rem; color: var(--text-muted); line-height: 1.4; margin-top:-.3rem; margin-bottom:.6rem;">
+          Find this in Firebase Console → <strong>Build → Realtime Database</strong> (at the top of the Data tab).
         </div>
+
+        <label for="fbConfigText">Firebase Config JSON / Snippet</label>
+        <textarea class="io-textarea" id="fbConfigText" placeholder='Paste your firebaseConfig object here...' style="height:90px"></textarea>
       </div>
 
       <div class="io-row">
@@ -2238,10 +2233,13 @@
       // Populate cloud sync inputs
       const savedPass = localStorage.getItem(SYNC_KEY_KEY) || '';
       const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
+      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || '';
       const passInp = document.getElementById('syncPassphrase');
       const cfgInp = document.getElementById('fbConfigText');
+      const urlInp = document.getElementById('fbDatabaseUrl');
       if (passInp) passInp.value = savedPass;
       if (cfgInp) cfgInp.value = savedConfig;
+      if (urlInp) urlInp.value = savedDbUrl;
       if (fbConnected) {
         document.getElementById('btnConnectSync').style.display = 'none';
         document.getElementById('btnDisconnectSync').style.display = '';
@@ -2735,14 +2733,15 @@
     function initFirebaseSync() {
       const savedConfig = localStorage.getItem(FB_CONFIG_KEY);
       const savedKey = localStorage.getItem(SYNC_KEY_KEY);
+      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || '';
       if (savedConfig && savedKey) {
-        connectFirebase(savedConfig, savedKey, true);
+        connectFirebase(savedConfig, savedKey, savedDbUrl, true);
       } else {
         updateSyncUI('offline', '⚪ Not Connected');
       }
     }
 
-    function connectFirebase(configRaw, passphrase, silent = false) {
+    function connectFirebase(configRaw, passphrase, customDbUrl = '', silent = false) {
       if (!window.firebase) {
         updateSyncUI('error', '🔴 Firebase SDK not loaded');
         if (!silent) toast('Firebase script not loaded. Check internet.');
@@ -2750,13 +2749,22 @@
       }
 
       const config = parseFirebaseConfig(configRaw);
-      if (!config || (!config.databaseURL && !config.projectId)) {
+      if (!config || (!config.databaseURL && !config.projectId && !customDbUrl)) {
         updateSyncUI('error', '🔴 Invalid Config');
         if (!silent) toast('Firebase config must include apiKey and projectId');
         return;
       }
-      if (!config.databaseURL && config.projectId) {
+
+      // Priority for databaseURL:
+      // 1. Explicitly entered customDbUrl
+      // 2. config.databaseURL inside JSON
+      // 3. Auto-derived from projectId
+      if (customDbUrl && customDbUrl.trim()) {
+        config.databaseURL = customDbUrl.trim().replace(/\/+$/, '');
+      } else if (!config.databaseURL && config.projectId) {
         config.databaseURL = `https://${config.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
+      } else if (config.databaseURL) {
+        config.databaseURL = config.databaseURL.replace(/\/+$/, '');
       }
 
       const cleanKey = passphrase.trim().replace(/[.#$\[\]/]/g, '_');
@@ -2768,19 +2776,35 @@
 
       try {
         updateSyncUI('syncing', '🟡 Connecting...');
-        if (!fbApp) {
-          fbApp = firebase.initializeApp(config, 'TimetableSync_' + Date.now());
+
+        if (fbApp) {
+          try { fbApp.delete(); } catch(_) {}
+          fbApp = null;
         }
+
+        fbApp = firebase.initializeApp(config, 'TimetableSync_' + Date.now());
         fbDb = firebase.database(fbApp);
         fbRef = fbDb.ref('timetables/' + cleanKey);
 
         localStorage.setItem(FB_CONFIG_KEY, configRaw);
         localStorage.setItem(SYNC_KEY_KEY, passphrase);
+        if (customDbUrl && customDbUrl.trim()) {
+          localStorage.setItem('timetable_fb_db_url', customDbUrl.trim());
+        }
 
         const btnConnect = document.getElementById('btnConnectSync');
         const btnDisconnect = document.getElementById('btnDisconnectSync');
         if (btnConnect) btnConnect.style.display = 'none';
         if (btnDisconnect) btnDisconnect.style.display = '';
+
+        // Live connection monitoring
+        fbDb.ref('.info/connected').on('value', snap => {
+          if (snap.val() === true) {
+            updateSyncUI('online', '🟢 Live Synced');
+          } else if (fbConnected) {
+            updateSyncUI('syncing', '🟡 Connecting...');
+          }
+        });
 
         fbRef.on('value', snapshot => {
           const remoteData = snapshot.val();
@@ -2811,8 +2835,7 @@
         });
 
         fbConnected = true;
-        updateSyncUI('online', '🟢 Live Synced');
-        if (!silent) toast('Connected to Cloud Sync ✓');
+        if (!silent) toast('Connecting to Cloud Sync...');
       } catch(e) {
         console.error(e);
         updateSyncUI('error', '🔴 Connection Error');
@@ -2828,6 +2851,7 @@
       fbRef = null;
       localStorage.removeItem(FB_CONFIG_KEY);
       localStorage.removeItem(SYNC_KEY_KEY);
+      localStorage.removeItem('timetable_fb_db_url');
 
       const btnConnect = document.getElementById('btnConnectSync');
       const btnDisconnect = document.getElementById('btnDisconnectSync');
@@ -2843,6 +2867,14 @@
       clearTimeout(cloudPushTimer);
       const pushFn = () => {
         updateSyncUI('syncing', '🟡 Syncing...');
+
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+          timedOut = true;
+          updateSyncUI('error', '🔴 Unreachable URL');
+          toast('Could not reach database. Check your Database URL in Settings!');
+        }, 8000);
+
         fbRef.set({
           working: schedules.working,
           off: schedules.off,
@@ -2850,8 +2882,12 @@
           completed: schedules.completed,
           lastModified: Date.now()
         }).then(() => {
-          updateSyncUI('online', '🟢 Live Synced');
+          clearTimeout(timeoutId);
+          if (!timedOut) {
+            updateSyncUI('online', '🟢 Live Synced');
+          }
         }).catch(err => {
+          clearTimeout(timeoutId);
           console.error(err);
           updateSyncUI('error', '🔴 Sync Failed');
         });
@@ -2868,13 +2904,14 @@
     document.getElementById('btnConnectSync').addEventListener('click', () => {
       const configVal = document.getElementById('fbConfigText').value.trim();
       const passVal = document.getElementById('syncPassphrase').value.trim();
+      const urlVal = document.getElementById('fbDatabaseUrl').value.trim();
       if (!passVal) { toast('Enter a sync passphrase first'); return; }
       if (!configVal) {
         document.getElementById('fbConfigSection').style.display = 'block';
         toast('Paste your Firebase config');
         return;
       }
-      connectFirebase(configVal, passVal);
+      connectFirebase(configVal, passVal, urlVal);
     });
 
     document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
