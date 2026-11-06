@@ -1469,6 +1469,16 @@
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    function normalizeCompleted(comp) {
+      if (!comp || comp.date !== getTodayDateStr()) {
+        return { date: getTodayDateStr(), keys: [] };
+      }
+      let k = comp.keys;
+      if (!k) k = [];
+      else if (!Array.isArray(k)) k = Object.values(k);
+      return { date: comp.date, keys: k };
+    }
+
     function save(skipCloudSync = false) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
       if (!skipCloudSync) {
@@ -1488,14 +1498,12 @@
           if (parsed.categoryLabels) {
             schedules.categoryLabels = parsed.categoryLabels;
           }
-          if (parsed.completed && parsed.completed.date === getTodayDateStr()) {
-            schedules.completed = parsed.completed;
+          if (parsed.completed) {
+            schedules.completed = normalizeCompleted(parsed.completed);
           }
         }
       } catch(_) {}
-      if (!schedules.completed || schedules.completed.date !== getTodayDateStr()) {
-        schedules.completed = { date: getTodayDateStr(), keys: [] };
-      }
+      schedules.completed = normalizeCompleted(schedules.completed);
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1587,9 +1595,7 @@
 
     function toggleCellDone(key) {
       pushUndo();
-      if (!schedules.completed || schedules.completed.date !== getTodayDateStr()) {
-        schedules.completed = { date: getTodayDateStr(), keys: [] };
-      }
+      schedules.completed = normalizeCompleted(schedules.completed);
       const idx = schedules.completed.keys.indexOf(key);
       if (idx >= 0) {
         schedules.completed.keys.splice(idx, 1);
@@ -1614,9 +1620,7 @@
 
       let totalTasks = 0;
       let doneTasks = 0;
-      const completedKeys = (schedules.completed && schedules.completed.date === getTodayDateStr())
-        ? schedules.completed.keys
-        : [];
+      const completedKeys = normalizeCompleted(schedules.completed).keys;
 
       targetSched.times.forEach(t => {
         const k = cellKey(todayName, t);
@@ -1738,9 +1742,7 @@
           // Check-off / Done state for today's column
           const todayName = ALL_DAYS[new Date().getDay()];
           const isTodayCol = (col === todayName);
-          const isDone = schedules.completed &&
-                         schedules.completed.date === getTodayDateStr() &&
-                         schedules.completed.keys.includes(key);
+          const isDone = isTodayCol && normalizeCompleted(schedules.completed).keys.includes(key);
 
           if (isDone) {
             cell.classList.add('is-done');
@@ -2912,8 +2914,8 @@
             schedules.working = remoteData.working;
             schedules.off = remoteData.off;
             if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
-            if (remoteData.completed && remoteData.completed.date === getTodayDateStr()) {
-              schedules.completed = remoteData.completed;
+            if (remoteData.completed) {
+              schedules.completed = normalizeCompleted(remoteData.completed);
             }
             save(true);
             render();
@@ -2980,8 +2982,8 @@
             schedules.working = remoteData.working;
             schedules.off = remoteData.off;
             if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
-            if (remoteData.completed && remoteData.completed.date === getTodayDateStr()) {
-              schedules.completed = remoteData.completed;
+            if (remoteData.completed) {
+              schedules.completed = normalizeCompleted(remoteData.completed);
             }
 
             save(true);
@@ -3062,6 +3064,7 @@
           }
         }
 
+        schedules._lastModified = payload.lastModified;
         updateSyncUI('online', '🟢 Live Synced');
       };
 
@@ -3071,6 +3074,31 @@
         cloudPushTimer = setTimeout(pushFn, 600);
       }
     }
+
+    // Background 4-Second Auto-Sync Poller (keeps mobile and desktop in lockstep)
+    setInterval(async () => {
+      if (!fbConnected || isRemoteUpdating || !fbRestUrl) return;
+      try {
+        const resp = await fetch(fbRestUrl);
+        if (resp.ok) {
+          const remoteData = await resp.json();
+          if (remoteData && remoteData.working && remoteData.off && remoteData.lastModified) {
+            const currentMod = schedules._lastModified || 0;
+            if (remoteData.lastModified > currentMod) {
+              isRemoteUpdating = true;
+              schedules.working = remoteData.working;
+              schedules.off = remoteData.off;
+              if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+              if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
+              schedules._lastModified = remoteData.lastModified;
+              save(true);
+              render();
+              setTimeout(() => { isRemoteUpdating = false; }, 300);
+            }
+          }
+        }
+      } catch (_) {}
+    }, 4000);
 
     // Direct Share Link Generation & URL Import
     function generateShareLink() {
