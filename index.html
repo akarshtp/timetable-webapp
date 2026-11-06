@@ -757,7 +757,59 @@
        SETTINGS DRAWER
        ═══════════════════════════════════════════════════════ */
     .settings-modal {
-      width: min(480px, 100%);
+      width: min(500px, 100%);
+    }
+    .settings-tabs {
+      display: flex;
+      gap: .35rem;
+      border-bottom: 2.5px solid var(--border-c);
+      padding-bottom: .6rem;
+      margin-bottom: .9rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .settings-tab-btn {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: .68rem;
+      padding: .4rem .7rem;
+      border: 2px solid var(--border-c);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 2px 2px 0px var(--border-c);
+      white-space: nowrap;
+      transition: transform .08s, background .12s, box-shadow .08s;
+      flex-shrink: 0;
+    }
+    .settings-tab-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: none;
+    }
+    .settings-tab-btn.active {
+      background: var(--yellow);
+      color: #000;
+      box-shadow: 2px 2px 0px var(--border-c);
+    }
+    .settings-tab-panel {
+      display: none;
+    }
+    .settings-tab-panel.active {
+      display: block;
+      animation: tabFadeIn .15s ease-out;
+    }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .sync-card {
+      background: var(--bg);
+      border: 2px solid var(--border-c);
+      border-radius: var(--radius);
+      padding: .85rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: .6rem;
     }
     .settings-section {
       margin-bottom: 1.2rem;
@@ -1172,103 +1224,127 @@
     <h2>⚙️ Manage Timetable</h2>
     <p class="modal-sub">Settings for <span id="settingsViewLabel">Working Day</span></p>
 
-    <!-- Add Time Slot -->
-    <div class="settings-section">
-      <h3>➕ Add Time Slot</h3>
-      <label for="settingsTime">Start Time</label>
-      <input type="time" id="settingsTime" value="12:00">
-      <button class="btn green" id="settingsAddSlot" style="width:100%">Add Slot</button>
+    <!-- Settings Tabs -->
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab-btn active" data-tab="tabSlots">⏰ Slots</button>
+      <button class="settings-tab-btn" data-tab="tabTheme">🎨 Theme</button>
+      <button class="settings-tab-btn" data-tab="tabSync">☁️ Sync</button>
+      <button class="settings-tab-btn" data-tab="tabData">💾 Backup</button>
     </div>
 
-    <!-- Manage Rows -->
-    <div class="settings-section">
-      <h3>📋 Manage Time Slots</h3>
-      <div class="slot-list" id="slotList"></div>
-    </div>
+    <!-- Panel 1: Slots -->
+    <div class="settings-tab-panel active" id="tabSlots">
+      <div class="settings-section">
+        <h3>➕ Add Time Slot</h3>
+        <label for="settingsTime">Start Time</label>
+        <input type="time" id="settingsTime" value="12:00">
+        <button class="btn green" id="settingsAddSlot" style="width:100%">Add Slot</button>
+      </div>
 
-    <!-- Categories -->
-    <div class="settings-section">
-      <h3>🎨 Color Categories</h3>
-      <div id="catEditor"></div>
-      <button class="btn yellow" id="settingsSaveCats" style="width:100%;margin-top:.4rem">Save Labels</button>
-    </div>
-
-    <!-- Appearance -->
-    <div class="settings-section">
-      <h3>🌗 Appearance</h3>
-      <div class="theme-row">
-        <span>Dark Mode</span>
-        <div class="theme-toggle" id="themeToggleSwitch"></div>
+      <div class="settings-section" style="margin-bottom:0">
+        <h3>📋 Manage Time Slots</h3>
+        <div class="slot-list" id="slotList"></div>
       </div>
     </div>
 
-    <!-- Cloud Sync Section -->
-    <div class="settings-section">
-      <h3>☁️ Cloud Sync (Multi-Device)</h3>
-      <p style="font-size: .68rem; margin-bottom: .6rem; color: var(--text-sub);">
-        Sync real-time between your mobile and desktop for free using Google Firebase.
-      </p>
-      <div id="syncStatusBadge" class="sync-badge offline">⚪ Not Connected</div>
-
-      <label for="syncPassphrase">Private Sync Passphrase</label>
-      <input type="text" id="syncPassphrase" placeholder="e.g. akarsh-private-2026" maxlength="50">
-      <p style="font-size: .62rem; color: var(--text-muted); margin-top:-.4rem; margin-bottom:.6rem;">
-        Enter the <strong>exact same passphrase</strong> on your mobile and laptop.
-      </p>
-
-      <div style="margin-bottom: .6rem;">
-        <a href="javascript:void(0)" id="toggleFbConfig" style="font-size: .68rem; font-weight:700; color: var(--blue); font-family: var(--font-mono); text-decoration: underline;">
-          ⚙️ Firebase Setup (One-Time) ▾
-        </a>
+    <!-- Panel 2: Theme & Appearance -->
+    <div class="settings-tab-panel" id="tabTheme">
+      <div class="settings-section">
+        <h3>🌗 Appearance</h3>
+        <div class="theme-row">
+          <span>Dark Mode</span>
+          <div class="theme-toggle" id="themeToggleSwitch"></div>
+        </div>
       </div>
 
-      <div id="fbConfigSection" style="display:none; margin-bottom: .7rem;">
-        <label for="fbDatabaseUrl">Realtime Database URL</label>
-        <input type="text" id="fbDatabaseUrl" placeholder="https://your-project-...firebasedatabase.app" style="margin-bottom:.5rem;">
-        <div style="font-size: .62rem; color: var(--text-muted); line-height: 1.4; margin-top:-.3rem; margin-bottom:.6rem;">
-          Find this in Firebase Console → <strong>Build → Realtime Database</strong> (at the top of the Data tab).
+      <div class="settings-section" style="margin-bottom:0">
+        <h3>🎨 Color Categories</h3>
+        <div id="catEditor"></div>
+        <button class="btn yellow" id="settingsSaveCats" style="width:100%;margin-top:.4rem">Save Labels</button>
+      </div>
+    </div>
+
+    <!-- Panel 3: Cloud Sync -->
+    <div class="settings-tab-panel" id="tabSync">
+      <div class="sync-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem;">
+          <span style="font-family:var(--font-mono); font-weight:700; font-size:.78rem;">Live Device Sync</span>
+          <div id="syncStatusBadge" class="sync-badge offline">⚪ Not Connected</div>
+        </div>
+        
+        <p style="font-size: .68rem; margin-bottom: .8rem; color: var(--text-sub); line-height:1.4;">
+          Sync your schedule live between your mobile and desktop in real-time.
+        </p>
+
+        <label for="syncPassphrase">Private Sync Passphrase</label>
+        <input type="text" id="syncPassphrase" placeholder="e.g. akarsh-private-key" maxlength="50">
+        <p style="font-size: .62rem; color: var(--text-muted); margin-top:-.4rem; margin-bottom:.8rem;">
+          Enter the <strong>exact same passphrase</strong> on your mobile and laptop.
+        </p>
+
+        <div class="io-row">
+          <button class="btn green" id="btnConnectSync" style="flex:1">Connect & Sync</button>
+          <button class="btn pink" id="btnDisconnectSync" style="display:none; flex:1">Disconnect</button>
         </div>
 
-        <label for="fbConfigText">Firebase Config JSON / Snippet</label>
-        <textarea class="io-textarea" id="fbConfigText" placeholder='Paste your firebaseConfig object here...' style="height:90px"></textarea>
-      </div>
+        <!-- Advanced toggle for URL/config if needed -->
+        <div style="margin-top: .9rem; padding-top: .7rem; border-top: 1.5px dashed var(--border-c);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:var(--font-mono); font-size:.64rem; font-weight:700; color:var(--text-sub);">⚙️ Database Connection</span>
+            <button class="btn sm" id="toggleFbConfig" style="font-size:.6rem; padding:.2rem .45rem;">Configure URL</button>
+          </div>
 
-      <div class="io-row">
-        <button class="btn green" id="btnConnectSync" style="flex:1">Connect & Sync</button>
-        <button class="btn pink" id="btnDisconnectSync" style="display:none; flex:1">Disconnect</button>
-      </div>
-    </div>
+          <div id="fbConfigSection" style="display:none; margin-top: .6rem;">
+            <label for="fbDatabaseUrl">Database URL</label>
+            <input type="text" id="fbDatabaseUrl" placeholder="https://my-timetable-e5af2-default-rtdb.asia-southeast1.firebasedatabase.app" style="margin-bottom:.4rem;">
+            
+            <label for="fbConfigText">Firebase Config</label>
+            <textarea class="io-textarea" id="fbConfigText" placeholder='Paste firebaseConfig object...' style="height:70px"></textarea>
+          </div>
+        </div>
 
-    <!-- Import / Export -->
-    <div class="settings-section">
-      <h3>💾 Import / Export Data</h3>
-      <div class="io-row">
-        <button class="btn blue" id="btnExportJSON">⬇ Download JSON</button>
-        <button class="btn green" id="btnCopyJSON">📋 Copy to Clipboard</button>
-      </div>
-      <label>Import: Upload File or Paste JSON</label>
-      <div class="io-row">
-        <button class="btn lilac" id="btnUploadJSON">⬆ Upload .json</button>
-      </div>
-      <textarea class="io-textarea" id="importTextarea" placeholder='Paste JSON here...'></textarea>
-      <button class="btn yellow" id="btnImportPaste" style="width:100%">Import from Text</button>
-      <input type="file" id="fileInput" accept=".json" style="display:none">
-    </div>
-
-    <!-- Danger Zone -->
-    <div class="settings-section">
-      <h3>⚠️ Danger Zone</h3>
-      <div class="danger-zone">
-        <button class="btn pink" id="btnResetFirst" style="width:100%">Reset Timetable to Default</button>
-        <div class="confirm-msg" id="resetConfirm">
-          <span>Are you sure?</span>
-          <button class="btn pink" id="btnResetYes">Yes, Reset</button>
-          <button class="btn" id="btnResetNo">Cancel</button>
+        <!-- 1-Click Instant Share Link -->
+        <div style="margin-top: .9rem; padding-top: .7rem; border-top: 1.5px dashed var(--border-c);">
+          <span style="font-family:var(--font-mono); font-size:.66rem; font-weight:700; display:block; margin-bottom:.3rem;">📱 Or Quick Share via Link</span>
+          <p style="font-size: .62rem; color: var(--text-muted); margin-bottom:.5rem;">
+            Copy a direct link to open this exact schedule on your phone instantly.
+          </p>
+          <button class="btn blue sm" id="btnShareLink" style="width:100%">📋 Copy Direct Share Link</button>
         </div>
       </div>
     </div>
 
-    <div class="modal-actions" style="margin-top:.5rem">
+    <!-- Panel 4: Data & Backup -->
+    <div class="settings-tab-panel" id="tabData">
+      <div class="settings-section">
+        <h3>💾 Import / Export Data</h3>
+        <div class="io-row">
+          <button class="btn blue" id="btnExportJSON">⬇ Download JSON</button>
+          <button class="btn green" id="btnCopyJSON">📋 Copy to Clipboard</button>
+        </div>
+        <label>Import: Upload File or Paste JSON</label>
+        <div class="io-row">
+          <button class="btn lilac" id="btnUploadJSON">⬆ Upload .json</button>
+        </div>
+        <textarea class="io-textarea" id="importTextarea" placeholder='Paste JSON here...'></textarea>
+        <button class="btn yellow" id="btnImportPaste" style="width:100%">Import from Text</button>
+        <input type="file" id="fileInput" accept=".json" style="display:none">
+      </div>
+
+      <div class="settings-section" style="margin-bottom:0">
+        <h3>⚠️ Danger Zone</h3>
+        <div class="danger-zone">
+          <button class="btn pink" id="btnResetFirst" style="width:100%">Reset Timetable to Default</button>
+          <div class="confirm-msg" id="resetConfirm">
+            <span>Are you sure?</span>
+            <button class="btn pink" id="btnResetYes">Yes, Reset</button>
+            <button class="btn" id="btnResetNo">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:.8rem">
       <button class="btn" id="settingsClose" style="width:100%">Close Settings</button>
     </div>
   </div>
@@ -2222,7 +2298,7 @@
       openSettings();
     });
 
-    function openSettings() {
+    function openSettings(initialTabId = 'tabSlots') {
       document.getElementById('settingsViewLabel').textContent =
         currentView === 'working' ? 'Working Day' : 'Off Day';
       renderSlotList();
@@ -2230,10 +2306,13 @@
       resetConfirmShown = false;
       document.getElementById('resetConfirm').classList.remove('show');
 
-      // Populate cloud sync inputs
+      // Switch to target tab
+      switchSettingsTab(initialTabId);
+
+      // Populate cloud sync inputs (with user's project defaults pre-configured)
       const savedPass = localStorage.getItem(SYNC_KEY_KEY) || '';
-      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
-      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || '';
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || JSON.stringify(DEFAULT_PRECONFIG, null, 2);
+      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
       const passInp = document.getElementById('syncPassphrase');
       const cfgInp = document.getElementById('fbConfigText');
       const urlInp = document.getElementById('fbDatabaseUrl');
@@ -2254,6 +2333,21 @@
 
       openModal('settingsModal');
     }
+
+    function switchSettingsTab(tabId) {
+      document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.settings-tab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === tabId);
+      });
+    }
+
+    document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        switchSettingsTab(btn.dataset.tab);
+      });
+    });
 
     // ── Add Time Slot ──
     document.getElementById('settingsAddSlot').addEventListener('click', () => {
@@ -2686,6 +2780,16 @@
     /* ════════════════════════════════════════════════════════
        CLOUD SYNC (FIREBASE REALTIME DATABASE)
        ════════════════════════════════════════════════════════ */
+    const DEFAULT_PRECONFIG = {
+      apiKey: "AIzaSyBDaC64lMuvgcqPnUK-YgqKW0CDL5xexYc",
+      authDomain: "my-timetable-e5af2.firebaseapp.com",
+      projectId: "my-timetable-e5af2",
+      databaseURL: "https://my-timetable-e5af2-default-rtdb.asia-southeast1.firebasedatabase.app",
+      storageBucket: "my-timetable-e5af2.firebasestorage.app",
+      messagingSenderId: "1013971773011",
+      appId: "1:1013971773011:web:9f30ad040ffce92ac148a6"
+    };
+
     function parseFirebaseConfig(raw) {
       if (!raw) return null;
       raw = raw.trim();
@@ -2731,10 +2835,10 @@
     }
 
     function initFirebaseSync() {
-      const savedConfig = localStorage.getItem(FB_CONFIG_KEY);
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || JSON.stringify(DEFAULT_PRECONFIG, null, 2);
       const savedKey = localStorage.getItem(SYNC_KEY_KEY);
-      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || '';
-      if (savedConfig && savedKey) {
+      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
+      if (savedKey) {
         connectFirebase(savedConfig, savedKey, savedDbUrl, true);
       } else {
         updateSyncUI('offline', '⚪ Not Connected');
@@ -2748,12 +2852,7 @@
         return;
       }
 
-      const config = parseFirebaseConfig(configRaw);
-      if (!config || (!config.databaseURL && !config.projectId && !customDbUrl)) {
-        updateSyncUI('error', '🔴 Invalid Config');
-        if (!silent) toast('Firebase config must include apiKey and projectId');
-        return;
-      }
+      const config = parseFirebaseConfig(configRaw) || { ...DEFAULT_PRECONFIG };
 
       // Priority for databaseURL:
       // 1. Explicitly entered customDbUrl
@@ -2783,13 +2882,14 @@
         }
 
         fbApp = firebase.initializeApp(config, 'TimetableSync_' + Date.now());
-        fbDb = firebase.database(fbApp);
+        // Connect to the specific regional database instance URL (Singapore)
+        fbDb = fbApp.database(config.databaseURL);
         fbRef = fbDb.ref('timetables/' + cleanKey);
 
         localStorage.setItem(FB_CONFIG_KEY, configRaw);
         localStorage.setItem(SYNC_KEY_KEY, passphrase);
-        if (customDbUrl && customDbUrl.trim()) {
-          localStorage.setItem('timetable_fb_db_url', customDbUrl.trim());
+        if (config.databaseURL) {
+          localStorage.setItem('timetable_fb_db_url', config.databaseURL);
         }
 
         const btnConnect = document.getElementById('btnConnectSync');
@@ -2831,11 +2931,15 @@
         }, err => {
           console.error(err);
           updateSyncUI('error', '🔴 Database Error');
-          toast('Firebase error: Check database rules in console');
+          if (err && err.message && err.message.toLowerCase().includes('permission')) {
+            toast('Permission denied: Set Realtime Database Rules to read/write true');
+          } else {
+            toast('Database error: ' + (err.message || 'Check database rules'));
+          }
         });
 
         fbConnected = true;
-        if (!silent) toast('Connecting to Cloud Sync...');
+        if (!silent) toast('Connected to Cloud Sync ✓');
       } catch(e) {
         console.error(e);
         updateSyncUI('error', '🔴 Connection Error');
@@ -2849,9 +2953,7 @@
       }
       fbConnected = false;
       fbRef = null;
-      localStorage.removeItem(FB_CONFIG_KEY);
       localStorage.removeItem(SYNC_KEY_KEY);
-      localStorage.removeItem('timetable_fb_db_url');
 
       const btnConnect = document.getElementById('btnConnectSync');
       const btnDisconnect = document.getElementById('btnDisconnectSync');
@@ -2872,7 +2974,7 @@
         const timeoutId = setTimeout(() => {
           timedOut = true;
           updateSyncUI('error', '🔴 Unreachable URL');
-          toast('Could not reach database. Check your Database URL in Settings!');
+          toast('Could not reach database. Check rules or Database URL!');
         }, 8000);
 
         fbRef.set({
@@ -2890,6 +2992,11 @@
           clearTimeout(timeoutId);
           console.error(err);
           updateSyncUI('error', '🔴 Sync Failed');
+          if (err && err.message && err.message.toLowerCase().includes('permission')) {
+            toast('Permission denied: Set Realtime Database Rules to read/write true');
+          } else {
+            toast('Sync failed: ' + (err.message || 'Check database URL or rules'));
+          }
         });
       };
 
@@ -2900,31 +3007,65 @@
       }
     }
 
+    // Direct Share Link Generation & URL Import
+    function generateShareLink() {
+      try {
+        const json = JSON.stringify(schedules);
+        const b64 = btoa(encodeURIComponent(json));
+        const url = window.location.origin + window.location.pathname + '#data=' + b64;
+        navigator.clipboard.writeText(url).then(() => {
+          toast('Share link copied to clipboard! 📋');
+        }).catch(() => {
+          prompt('Copy this link to open on phone:', url);
+        });
+      } catch(e) {
+        toast('Error generating link');
+      }
+    }
+
+    function checkUrlImport() {
+      if (window.location.hash && window.location.hash.startsWith('#data=')) {
+        try {
+          const b64 = window.location.hash.slice(6);
+          const json = decodeURIComponent(atob(b64));
+          const parsed = JSON.parse(json);
+          if (parsed.working && parsed.off) {
+            if (confirm('Load timetable from share link?')) {
+              pushUndo();
+              schedules.working = parsed.working;
+              schedules.off = parsed.off;
+              if (parsed.categoryLabels) schedules.categoryLabels = parsed.categoryLabels;
+              save();
+              render();
+              toast('Loaded from share link! ✓');
+              history.replaceState(null, '', window.location.pathname);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+
     // Cloud sync settings buttons & helpers
     document.getElementById('btnConnectSync').addEventListener('click', () => {
       const configVal = document.getElementById('fbConfigText').value.trim();
       const passVal = document.getElementById('syncPassphrase').value.trim();
       const urlVal = document.getElementById('fbDatabaseUrl').value.trim();
       if (!passVal) { toast('Enter a sync passphrase first'); return; }
-      if (!configVal) {
-        document.getElementById('fbConfigSection').style.display = 'block';
-        toast('Paste your Firebase config');
-        return;
-      }
-      connectFirebase(configVal, passVal, urlVal);
+      connectFirebase(configVal || JSON.stringify(DEFAULT_PRECONFIG), passVal, urlVal);
     });
 
     document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
+    document.getElementById('btnShareLink').addEventListener('click', generateShareLink);
 
     document.getElementById('toggleFbConfig').addEventListener('click', () => {
       const sec = document.getElementById('fbConfigSection');
-      sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+      const isHidden = sec.style.display === 'none';
+      sec.style.display = isHidden ? 'block' : 'none';
+      document.getElementById('toggleFbConfig').textContent = isHidden ? 'Hide Details' : 'Configure URL';
     });
 
     document.getElementById('btnToolbarSync').addEventListener('click', () => {
-      openSettings();
-      const el = document.getElementById('syncStatusBadge');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      openSettings('tabSync');
     });
 
     /* ════════════════════════════════════════════════════════
