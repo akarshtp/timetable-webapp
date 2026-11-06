@@ -2852,7 +2852,7 @@
       }
     }
 
-    function connectFirebase(configRaw, passphrase, customDbUrl = '', silent = false) {
+    async function connectFirebase(configRaw, passphrase, customDbUrl = '', silent = false) {
       if (!window.firebase) {
         updateSyncUI('error', '🔴 Firebase SDK not loaded');
         if (!silent) toast('Firebase script not loaded. Check internet.');
@@ -2865,6 +2865,7 @@
         if (!u) return '';
         let s = u.trim().replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-').replace(/\/+$/, '');
         if (s.endsWith('.firebase')) s += 'database.app';
+        if (s.endsWith('.firebasedatabase')) s += '.app';
         return s;
       }
 
@@ -2885,18 +2886,39 @@
         if (!silent) {
           const sec = document.getElementById('fbConfigSection');
           if (sec) sec.style.display = 'block';
-          toast('Paste your Firebase config once under Database Connection');
+          toast('Paste your Firebase config once under ⚙️ Database Connection');
         }
         return;
       }
 
-      const cleanKey = passphrase.trim().replace(/[.#$\[\]/]/g, '_');
+      // Sanitize passphrase: replace spaces and special chars with underscores
+      const cleanKey = passphrase.trim().replace(/[\s.#$\[\]/]/g, '_').replace(/_+/g, '_');
       if (!cleanKey) {
         updateSyncUI('error', '🔴 Key Required');
         if (!silent) toast('Please enter a private sync passphrase');
         return;
       }
 
+      // ─── Step 1: REST API connectivity test ───
+      updateSyncUI('syncing', '🟡 Testing URL...');
+      try {
+        const testUrl = config.databaseURL + '/.json?shallow=true&limitToFirst=1';
+        const resp = await fetch(testUrl, { signal: AbortSignal.timeout(6000) });
+        if (!resp.ok && resp.status === 401) {
+          updateSyncUI('error', '🔴 Auth Error');
+          if (!silent) toast('Database rejected request. Check your Firebase Config apiKey.');
+          return;
+        }
+        // 200 = success (data or null), 403 = permission denied at root (rules scoped — this is OK)
+        if (!silent) console.log('DB reachable, status:', resp.status);
+      } catch(fetchErr) {
+        console.error('REST test failed:', fetchErr);
+        updateSyncUI('error', '🔴 URL Unreachable');
+        if (!silent) toast('Cannot reach database URL. Check your Database URL field is complete (must end in .firebasedatabase.app)');
+        return;
+      }
+
+      // ─── Step 2: Initialize Firebase SDK ───
       try {
         updateSyncUI('syncing', '🟡 Connecting...');
 
@@ -2906,7 +2928,6 @@
         }
 
         fbApp = firebase.initializeApp(config, 'TimetableSync_' + Date.now());
-        // Connect to the specific regional database instance URL (Singapore)
         fbDb = fbApp.database(config.databaseURL);
         fbRef = fbDb.ref('timetables/' + cleanKey);
 
@@ -2921,15 +2942,18 @@
         if (btnConnect) btnConnect.style.display = 'none';
         if (btnDisconnect) btnDisconnect.style.display = '';
 
-        // Live connection monitoring
+        // ─── Step 3: Wait for WebSocket connection before doing anything ───
+        let wsConnected = false;
         fbDb.ref('.info/connected').on('value', snap => {
           if (snap.val() === true) {
+            wsConnected = true;
             updateSyncUI('online', '🟢 Live Synced');
           } else if (fbConnected) {
-            updateSyncUI('syncing', '🟡 Connecting...');
+            updateSyncUI('syncing', '🟡 Reconnecting...');
           }
         });
 
+        // ─── Step 4: Listen for remote data changes ───
         fbRef.on('value', snapshot => {
           const remoteData = snapshot.val();
           if (remoteData && remoteData.working && remoteData.off) {
@@ -2948,7 +2972,8 @@
             updateSyncUI('online', '🟢 Live Synced');
             if (!silent) toast('Synced from cloud ☁️');
             setTimeout(() => { isRemoteUpdating = false; }, 300);
-          } else {
+          } else if (wsConnected) {
+            // Only push to empty room once WebSocket is confirmed connected
             debouncedCloudPush(true);
             updateSyncUI('online', '🟢 Live Synced (New Room)');
           }
@@ -3074,12 +3099,12 @@
     }
 
     // Cloud sync settings buttons & helpers
-    document.getElementById('btnConnectSync').addEventListener('click', () => {
+    document.getElementById('btnConnectSync').addEventListener('click', async () => {
       const configVal = document.getElementById('fbConfigText').value.trim();
       const passVal = document.getElementById('syncPassphrase').value.trim();
       const urlVal = document.getElementById('fbDatabaseUrl').value.trim();
       if (!passVal) { toast('Enter a sync passphrase first'); return; }
-      connectFirebase(configVal || localStorage.getItem(FB_CONFIG_KEY) || '', passVal, urlVal);
+      await connectFirebase(configVal || localStorage.getItem(FB_CONFIG_KEY) || '', passVal, urlVal);
     });
 
     document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
