@@ -2311,8 +2311,15 @@
 
       // Populate cloud sync inputs (with user's project defaults pre-configured)
       const savedPass = localStorage.getItem(SYNC_KEY_KEY) || '';
-      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || JSON.stringify(DEFAULT_PRECONFIG, null, 2);
-      const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
+      let savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
+      if (savedDbUrl) {
+        savedDbUrl = savedDbUrl.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-').replace(/\/+$/, '');
+        if (savedDbUrl.endsWith('.firebase')) savedDbUrl += 'database.app';
+        if (!savedDbUrl.endsWith('.firebasedatabase.app') && !savedDbUrl.endsWith('.firebaseio.com')) {
+          savedDbUrl = DEFAULT_PRECONFIG.databaseURL;
+        }
+      }
       const passInp = document.getElementById('syncPassphrase');
       const cfgInp = document.getElementById('fbConfigText');
       const urlInp = document.getElementById('fbDatabaseUrl');
@@ -2781,13 +2788,13 @@
        CLOUD SYNC (FIREBASE REALTIME DATABASE)
        ════════════════════════════════════════════════════════ */
     const DEFAULT_PRECONFIG = {
-      apiKey: "AIzaSyBDaC64lMuvgcqPnUK-YgqKW0CDL5xexYc",
+      apiKey: "",
       authDomain: "my-timetable-e5af2.firebaseapp.com",
       projectId: "my-timetable-e5af2",
       databaseURL: "https://my-timetable-e5af2-default-rtdb.asia-southeast1.firebasedatabase.app",
       storageBucket: "my-timetable-e5af2.firebasestorage.app",
-      messagingSenderId: "1013971773011",
-      appId: "1:1013971773011:web:9f30ad040ffce92ac148a6"
+      messagingSenderId: "",
+      appId: ""
     };
 
     function parseFirebaseConfig(raw) {
@@ -2835,7 +2842,7 @@
     }
 
     function initFirebaseSync() {
-      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || JSON.stringify(DEFAULT_PRECONFIG, null, 2);
+      const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
       const savedKey = localStorage.getItem(SYNC_KEY_KEY);
       const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
       if (savedKey) {
@@ -2854,16 +2861,33 @@
 
       const config = parseFirebaseConfig(configRaw) || { ...DEFAULT_PRECONFIG };
 
+      function sanitizeUrl(u) {
+        if (!u) return '';
+        let s = u.trim().replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-').replace(/\/+$/, '');
+        if (s.endsWith('.firebase')) s += 'database.app';
+        return s;
+      }
+
       // Priority for databaseURL:
       // 1. Explicitly entered customDbUrl
       // 2. config.databaseURL inside JSON
       // 3. Auto-derived from projectId
       if (customDbUrl && customDbUrl.trim()) {
-        config.databaseURL = customDbUrl.trim().replace(/\/+$/, '');
+        config.databaseURL = sanitizeUrl(customDbUrl);
       } else if (!config.databaseURL && config.projectId) {
         config.databaseURL = `https://${config.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
       } else if (config.databaseURL) {
-        config.databaseURL = config.databaseURL.replace(/\/+$/, '');
+        config.databaseURL = sanitizeUrl(config.databaseURL);
+      }
+
+      if (!config || !config.apiKey) {
+        updateSyncUI('offline', '⚪ Config Needed');
+        if (!silent) {
+          const sec = document.getElementById('fbConfigSection');
+          if (sec) sec.style.display = 'block';
+          toast('Paste your Firebase config once under Database Connection');
+        }
+        return;
       }
 
       const cleanKey = passphrase.trim().replace(/[.#$\[\]/]/g, '_');
@@ -2954,6 +2978,10 @@
       fbConnected = false;
       fbRef = null;
       localStorage.removeItem(SYNC_KEY_KEY);
+      localStorage.removeItem('timetable_fb_db_url');
+
+      const passInp = document.getElementById('syncPassphrase');
+      if (passInp) passInp.value = '';
 
       const btnConnect = document.getElementById('btnConnectSync');
       const btnDisconnect = document.getElementById('btnDisconnectSync');
@@ -2974,7 +3002,7 @@
         const timeoutId = setTimeout(() => {
           timedOut = true;
           updateSyncUI('error', '🔴 Unreachable URL');
-          toast('Could not reach database. Check rules or Database URL!');
+          toast('Could not reach database. Make sure Rules are Published in Firebase Console!');
         }, 8000);
 
         fbRef.set({
@@ -3051,7 +3079,7 @@
       const passVal = document.getElementById('syncPassphrase').value.trim();
       const urlVal = document.getElementById('fbDatabaseUrl').value.trim();
       if (!passVal) { toast('Enter a sync passphrase first'); return; }
-      connectFirebase(configVal || JSON.stringify(DEFAULT_PRECONFIG), passVal, urlVal);
+      connectFirebase(configVal || localStorage.getItem(FB_CONFIG_KEY) || '', passVal, urlVal);
     });
 
     document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
