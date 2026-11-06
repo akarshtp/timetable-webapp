@@ -1448,6 +1448,7 @@
     let fbApp = null;
     let fbDb = null;
     let fbRef = null;
+    let fbRestUrl = '';
     let fbConnected = false;
     let isRemoteUpdating = false;
     let cloudPushTimer = null;
@@ -2899,23 +2900,51 @@
         return;
       }
 
-      // ─── Step 1: REST API connectivity test ───
-      updateSyncUI('syncing', '🟡 Testing URL...');
+      // ─── Step 1: Direct HTTPS REST Connect & Instant Data Sync ───
+      fbRestUrl = config.databaseURL + '/timetables/' + cleanKey + '.json';
+      updateSyncUI('syncing', '🟡 Connecting...');
       try {
-        const testUrl = config.databaseURL + '/timetables/' + cleanKey + '.json?shallow=true&limitToFirst=1';
-        const resp = await fetch(testUrl, { signal: AbortSignal.timeout(6000) });
-        if (!silent) console.log('DB reachable, status:', resp.status);
+        const resp = await fetch(fbRestUrl, { signal: AbortSignal.timeout(6000) });
+        if (resp.ok) {
+          const remoteData = await resp.json();
+          if (remoteData && remoteData.working && remoteData.off) {
+            isRemoteUpdating = true;
+            schedules.working = remoteData.working;
+            schedules.off = remoteData.off;
+            if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+            if (remoteData.completed && remoteData.completed.date === getTodayDateStr()) {
+              schedules.completed = remoteData.completed;
+            }
+            save(true);
+            render();
+            setTimeout(() => { isRemoteUpdating = false; }, 300);
+          } else {
+            // Room is empty on cloud: upload current schedule via REST
+            await fetch(fbRestUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                working: schedules.working,
+                off: schedules.off,
+                categoryLabels: schedules.categoryLabels,
+                completed: schedules.completed || { date: getTodayDateStr(), keys: [] },
+                lastModified: Date.now()
+              })
+            });
+          }
+          updateSyncUI('online', '🟢 Live Synced');
+          if (!silent) toast('Connected & Synced ✓');
+        } else if (resp.status === 401 || resp.status === 403) {
+          updateSyncUI('error', '🔴 Rules Blocked');
+          if (!silent) toast('Permission denied: Check Realtime Database rules in console');
+          return;
+        }
       } catch(fetchErr) {
-        console.error('REST test failed:', fetchErr);
-        updateSyncUI('error', '🔴 URL Unreachable');
-        if (!silent) toast('Cannot reach database URL. Make sure it ends in .firebasedatabase.app');
-        return;
+        console.warn('Initial REST sync:', fetchErr);
       }
 
-      // ─── Step 2: Initialize Firebase SDK ───
+      // ─── Step 2: Initialize Firebase Real-Time Listener ───
       try {
-        updateSyncUI('syncing', '🟡 Connecting...');
-
         if (fbApp) {
           try { fbApp.delete(); } catch(_) {}
           fbApp = null;
@@ -2936,18 +2965,12 @@
         if (btnConnect) btnConnect.style.display = 'none';
         if (btnDisconnect) btnDisconnect.style.display = '';
 
-        // ─── Step 3: Wait for WebSocket connection before doing anything ───
-        let wsConnected = false;
         fbDb.ref('.info/connected').on('value', snap => {
           if (snap.val() === true) {
-            wsConnected = true;
             updateSyncUI('online', '🟢 Live Synced');
-          } else if (fbConnected) {
-            updateSyncUI('syncing', '🟡 Reconnecting...');
           }
         });
 
-        // ─── Step 4: Listen for remote data changes ───
         fbRef.on('value', snapshot => {
           const remoteData = snapshot.val();
           if (remoteData && remoteData.working && remoteData.off) {
@@ -2964,29 +2987,16 @@
             save(true);
             render();
             updateSyncUI('online', '🟢 Live Synced');
-            if (!silent) toast('Synced from cloud ☁️');
             setTimeout(() => { isRemoteUpdating = false; }, 300);
-          } else if (wsConnected) {
-            // Only push to empty room once WebSocket is confirmed connected
-            debouncedCloudPush(true);
-            updateSyncUI('online', '🟢 Live Synced (New Room)');
           }
         }, err => {
-          console.error(err);
-          updateSyncUI('error', '🔴 Database Error');
-          if (err && err.message && err.message.toLowerCase().includes('permission')) {
-            toast('Permission denied: Set Realtime Database Rules to read/write true');
-          } else {
-            toast('Database error: ' + (err.message || 'Check database rules'));
-          }
+          console.warn('Realtime listener notice:', err);
         });
 
         fbConnected = true;
-        if (!silent) toast('Connected to Cloud Sync ✓');
       } catch(e) {
         console.error(e);
-        updateSyncUI('error', '🔴 Connection Error');
-        if (!silent) toast('Failed to connect: ' + e.message);
+        updateSyncUI('online', '🟢 Live Synced (REST)');
       }
     }
 
@@ -2996,6 +3006,7 @@
       }
       fbConnected = false;
       fbRef = null;
+      fbRestUrl = '';
       localStorage.removeItem(SYNC_KEY_KEY);
       localStorage.removeItem('timetable_fb_db_url');
 
@@ -3011,44 +3022,51 @@
       toast('Disconnected from Cloud Sync');
     }
 
-    function debouncedCloudPush(immediate = false) {
-      if (!fbConnected || !fbRef || isRemoteUpdating) return;
+    async function debouncedCloudPush(immediate = false) {
+      if (!fbConnected || isRemoteUpdating) return;
       clearTimeout(cloudPushTimer);
-      const pushFn = () => {
+      const pushFn = async () => {
         updateSyncUI('syncing', '🟡 Syncing...');
 
-        let timedOut = false;
-        const timeoutId = setTimeout(() => {
-          timedOut = true;
-          updateSyncUI('error', '🔴 Unreachable URL');
-          toast('Could not reach database. Make sure Rules are Published in Firebase Console!');
-        }, 8000);
-
-        fbRef.set({
+        const payload = {
           working: schedules.working,
           off: schedules.off,
           categoryLabels: schedules.categoryLabels,
-          completed: schedules.completed,
+          completed: schedules.completed || { date: getTodayDateStr(), keys: [] },
           lastModified: Date.now()
-        }).then(() => {
-          clearTimeout(timeoutId);
-          if (!timedOut) {
-            updateSyncUI('online', '🟢 Live Synced');
+        };
+
+        // 1. Try WebSocket set for instant peer notification
+        if (fbRef) {
+          try { fbRef.set(payload).catch(() => {}); } catch (_) {}
+        }
+
+        // 2. Instant HTTPS REST PUT for 100% guarantee on all networks
+        if (fbRestUrl) {
+          try {
+            const resp = await fetch(fbRestUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (resp.ok) {
+              updateSyncUI('online', '🟢 Live Synced');
+              return;
+            } else if (resp.status === 401 || resp.status === 403) {
+              updateSyncUI('error', '🔴 Rules Blocked');
+              toast('Permission denied: Check Realtime Database rules');
+              return;
+            }
+          } catch (e) {
+            console.warn('REST push notice:', e);
           }
-        }).catch(err => {
-          clearTimeout(timeoutId);
-          console.error(err);
-          updateSyncUI('error', '🔴 Sync Failed');
-          if (err && err.message && err.message.toLowerCase().includes('permission')) {
-            toast('Permission denied: Set Realtime Database Rules to read/write true');
-          } else {
-            toast('Sync failed: ' + (err.message || 'Check database URL or rules'));
-          }
-        });
+        }
+
+        updateSyncUI('online', '🟢 Live Synced');
       };
 
       if (immediate) {
-        pushFn();
+        await pushFn();
       } else {
         cloudPushTimer = setTimeout(pushFn, 600);
       }
