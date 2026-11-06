@@ -2902,19 +2902,13 @@
       // ─── Step 1: REST API connectivity test ───
       updateSyncUI('syncing', '🟡 Testing URL...');
       try {
-        const testUrl = config.databaseURL + '/.json?shallow=true&limitToFirst=1';
+        const testUrl = config.databaseURL + '/timetables/' + cleanKey + '.json?shallow=true&limitToFirst=1';
         const resp = await fetch(testUrl, { signal: AbortSignal.timeout(6000) });
-        if (!resp.ok && resp.status === 401) {
-          updateSyncUI('error', '🔴 Auth Error');
-          if (!silent) toast('Database rejected request. Check your Firebase Config apiKey.');
-          return;
-        }
-        // 200 = success (data or null), 403 = permission denied at root (rules scoped — this is OK)
         if (!silent) console.log('DB reachable, status:', resp.status);
       } catch(fetchErr) {
         console.error('REST test failed:', fetchErr);
         updateSyncUI('error', '🔴 URL Unreachable');
-        if (!silent) toast('Cannot reach database URL. Check your Database URL field is complete (must end in .firebasedatabase.app)');
+        if (!silent) toast('Cannot reach database URL. Make sure it ends in .firebasedatabase.app');
         return;
       }
 
