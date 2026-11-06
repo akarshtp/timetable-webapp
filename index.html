@@ -672,10 +672,21 @@
     }
     .modal.open { transform: translateX(-50%) translateY(0); }
 
+    .modal-close-btn {
+      position: absolute;
+      top: .7rem;
+      right: .7rem;
+      width: 34px;
+      height: 34px;
+      font-size: 1rem;
+      z-index: 1;
+    }
+
     .modal h2 {
       font-weight: 800;
       font-size: 1.1rem;
       margin-bottom: .1rem;
+      padding-right: 2.5rem;
     }
     .modal .modal-sub {
       font-family: var(--font-mono);
@@ -1176,6 +1187,7 @@
 
   <!-- Cell Edit Modal -->
   <div class="modal" id="cellModal">
+    <button class="icon-btn modal-close-btn" type="button" aria-label="Close editor" title="Close">×</button>
     <h2 id="cellModalTitle">Edit Cell</h2>
     <p class="modal-sub" id="modalSub">Monday · 09:00 – 10:00 AM</p>
     <label for="inputTitle">Activity</label>
@@ -1221,6 +1233,7 @@
 
   <!-- Settings Modal -->
   <div class="modal settings-modal" id="settingsModal">
+    <button class="icon-btn modal-close-btn" type="button" aria-label="Close settings" title="Close">×</button>
     <h2>⚙️ Manage Timetable</h2>
     <p class="modal-sub">Settings for <span id="settingsViewLabel">Working Day</span></p>
 
@@ -1495,6 +1508,9 @@
     let currentDbUrl = '';
     let lastSyncTimestamp = null;
     let currentSyncRoom = '';
+    let localEditVersion = 0;
+    let localUnsyncedChanges = localStorage.getItem('timetable_sync_dirty') === '1';
+    let pendingLocalWriteTimestamp = null;
     const FB_CONFIG_KEY = 'timetable_fb_config';
     const SYNC_KEY_KEY = 'timetable_sync_key';
 
@@ -1525,6 +1541,9 @@
     function save(skipCloudSync = false) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
       if (!skipCloudSync) {
+        localEditVersion++;
+        localUnsyncedChanges = true;
+        localStorage.setItem('timetable_sync_dirty', '1');
         debouncedCloudPush();
       }
     }
@@ -2654,6 +2673,9 @@
     }
 
     document.getElementById('overlay').addEventListener('click', closeModal);
+    document.querySelectorAll('.modal-close-btn').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
 
     // Click outside grid to deselect (but not on pill or modals)
     document.addEventListener('click', e => {
@@ -2919,6 +2941,54 @@
       }
     }
 
+    function applyRemoteSyncData(remoteData) {
+      if (!remoteData || !remoteData.working || !remoteData.off) return false;
+
+      // Ignore this device's own write echo. Otherwise ask before replacing
+      // local edits that have not yet been confirmed by Firebase.
+      if (localUnsyncedChanges && remoteData.lastModified !== pendingLocalWriteTimestamp) {
+        const keepLocal = confirm(
+          'This device has edits that have not synced, and another version exists in the cloud. ' +
+          'Choose OK to keep this device’s version and upload it. Choose Cancel to load the cloud version.'
+        );
+        if (keepLocal) {
+          debouncedCloudPush(true);
+          return false;
+        }
+        localUnsyncedChanges = false;
+        localStorage.removeItem('timetable_sync_dirty');
+      }
+
+      isRemoteUpdating = true;
+      schedules.working = remoteData.working;
+      schedules.off = remoteData.off;
+      if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
+      if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
+      schedules._lastModified = remoteData.lastModified || Date.now();
+      lastSyncTimestamp = Date.now();
+      localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+      save(true);
+      render();
+      updateSyncUI('online', '🟢 Live Synced');
+      renderSyncInfo();
+      setTimeout(() => { isRemoteUpdating = false; }, 300);
+      return true;
+    }
+
+    function describeSyncError(error) {
+      const detail = String(error && (error.message || error.code) || error || '').toLowerCase();
+      if (/permission_denied|permission denied|unauthorized|401|403/.test(detail)) {
+        return 'Firebase denied the sync. Check the Realtime Database rules.';
+      }
+      if (/invalid key|invalid data|400|couldn.t parse key/.test(detail)) {
+        return 'Sync data contains a value Firebase cannot store. Check the console for details.';
+      }
+      if (/network|offline|timeout|timed out|fetch/.test(detail)) {
+        return 'Could not reach Firebase. Check your network and database URL.';
+      }
+      return `Sync failed: ${error && error.message ? error.message : 'see browser console for details'}`;
+    }
+
     function initFirebaseSync() {
       const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
       const savedKey = localStorage.getItem(SYNC_KEY_KEY);
@@ -3002,17 +3072,7 @@
             if (resp.ok) {
               const remoteData = await resp.json();
               if (remoteData && remoteData.working && remoteData.off) {
-                isRemoteUpdating = true;
-                schedules.working = remoteData.working;
-                schedules.off = remoteData.off;
-                if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
-                if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
-                schedules._lastModified = remoteData.lastModified || Date.now();
-                lastSyncTimestamp = Date.now();
-                localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
-                save(true);
-                render();
-                setTimeout(() => { isRemoteUpdating = false; }, 300);
+                applyRemoteSyncData(remoteData);
               }
               fbConnected = true;
               updateSyncUI('online', '🟢 Live Synced');
@@ -3025,8 +3085,8 @@
               return;
             }
           } catch (_) {}
-          updateSyncUI('error', '🔴 Timeout');
-          if (!silent) toast('Connection timed out. Check Database URL and network.');
+          updateSyncUI('error', '🔴 Connection Failed');
+          if (!silent) toast('Could not confirm the database connection. Check the database URL, network, and Realtime Database rules.');
         }
       }, 5000);
 
@@ -3070,22 +3130,7 @@
           const remoteData = snapshot.val();
           if (remoteData && remoteData.working && remoteData.off) {
             if (isRemoteUpdating) return;
-            isRemoteUpdating = true;
-
-            schedules.working = remoteData.working;
-            schedules.off = remoteData.off;
-            if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
-            if (remoteData.completed) {
-              schedules.completed = normalizeCompleted(remoteData.completed);
-            }
-            schedules._lastModified = remoteData.lastModified || Date.now();
-            lastSyncTimestamp = Date.now();
-            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
-
-            save(true);
-            render();
-            updateSyncUI('online', '🟢 Live Synced');
-            renderSyncInfo();
+            applyRemoteSyncData(remoteData);
             if (!initialDataHandled && !silent) {
               toast(`Connected to room "${cleanKey}" ✓`);
             }
@@ -3101,7 +3146,13 @@
               completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
               lastModified: Date.now()
             };
+            pendingLocalWriteTimestamp = initPayload.lastModified;
+            const initEditVersion = localEditVersion;
             fbRef.set(initPayload).then(() => {
+              if (localEditVersion === initEditVersion) {
+                localUnsyncedChanges = false;
+                localStorage.removeItem('timetable_sync_dirty');
+              }
               lastSyncTimestamp = Date.now();
               localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
               updateSyncUI('online', '🟢 Live Synced');
@@ -3109,15 +3160,15 @@
               if (!silent) toast(`Room "${cleanKey}" created & uploaded! ✓`);
             }).catch(err => {
               console.error('Initial room creation error:', err);
-              updateSyncUI('error', '🔴 Rules Blocked');
-              toast('Database write error: ' + (err.message || 'Permission denied'));
+              updateSyncUI('error', '🔴 Sync Failed');
+              toast(describeSyncError(err));
             });
           }
         }, err => {
           clearTimeout(connectWatchdog);
           console.error('Realtime listener notice:', err);
-          updateSyncUI('error', '🔴 Rules Blocked');
-          toast('Permission denied: Check Realtime Database rules in console');
+          updateSyncUI('error', '🔴 Sync Failed');
+          toast(describeSyncError(err));
         });
 
       } catch(e) {
@@ -3171,8 +3222,11 @@
           completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
           lastModified: Date.now()
         };
+        const pushEditVersion = localEditVersion;
+        pendingLocalWriteTimestamp = payload.lastModified;
 
         let pushSuccess = false;
+        let syncError = null;
 
         // 1. Try the Firebase SDK first. Its connection state is confirmed by
         // the .info/connected listener; do not treat a pending socket as success.
@@ -3183,7 +3237,7 @@
               new Promise((_, reject) => setTimeout(() => reject(new Error('ws_timeout')), 10000))
             ]);
             pushSuccess = true;
-          } catch (_) {}
+          } catch (err) { syncError = err; }
         }
 
         // 2. If the socket did not confirm, try the Realtime Database REST API.
@@ -3200,25 +3254,32 @@
               pushSuccess = true;
             } else if (resp.status === 401 || resp.status === 403) {
               updateSyncUI('error', '🔴 Rules Blocked');
-              toast('Permission denied: Check Realtime Database rules in console');
+              toast(describeSyncError(`HTTP ${resp.status}: permission denied`));
               return;
             } else {
-              console.error('Realtime Database REST write failed:', resp.status, await resp.text());
+              const responseText = await resp.text();
+              syncError = new Error(`HTTP ${resp.status}: ${responseText}`);
+              console.error('Realtime Database REST write failed:', resp.status, responseText);
             }
           } catch (err) {
+            syncError = err;
             console.error('Realtime Database REST write failed:', err);
           }
         }
 
         if (pushSuccess) {
           schedules._lastModified = payload.lastModified;
+          if (localEditVersion === pushEditVersion) {
+            localUnsyncedChanges = false;
+            localStorage.removeItem('timetable_sync_dirty');
+          }
           lastSyncTimestamp = Date.now();
           localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
           updateSyncUI('online', '🟢 Live Synced');
           renderSyncInfo();
         } else {
           updateSyncUI('error', '🔴 Sync Failed');
-          toast('Sync failed. Check your network connection and Realtime Database rules.');
+          toast(describeSyncError(syncError));
         }
       };
 
@@ -3238,18 +3299,7 @@
         fbRef.once('value').then(snap => {
           const data = snap.val();
           if (data && data.working && data.off && data.lastModified > (schedules._lastModified || 0)) {
-            isRemoteUpdating = true;
-            schedules.working = data.working;
-            schedules.off = data.off;
-            if (data.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(data.categoryLabels);
-            if (data.completed) schedules.completed = normalizeCompleted(data.completed);
-            schedules._lastModified = data.lastModified;
-            lastSyncTimestamp = Date.now();
-            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
-            save(true);
-            render();
-            renderSyncInfo();
-            setTimeout(() => { isRemoteUpdating = false; }, 300);
+            applyRemoteSyncData(data);
           }
         }).catch(() => {});
       }
