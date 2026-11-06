@@ -1463,6 +1463,8 @@
     let fbConnected = false;
     let isRemoteUpdating = false;
     let cloudPushTimer = null;
+    let connectWatchdog = null;
+    let currentDbUrl = '';
     let lastSyncTimestamp = null;
     let currentSyncRoom = '';
     const FB_CONFIG_KEY = 'timetable_fb_config';
@@ -2895,6 +2897,7 @@
       const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
       const lastSync = localStorage.getItem('timetable_last_sync');
       if (lastSync) lastSyncTimestamp = parseInt(lastSync, 10) || null;
+      if (savedDbUrl) currentDbUrl = savedDbUrl;
 
       const passInp = document.getElementById('syncPassphrase');
       const cfgInp = document.getElementById('fbConfigText');
@@ -2911,6 +2914,7 @@
     }
 
     async function connectFirebase(configRaw, passphrase, customDbUrl = '', silent = false) {
+      clearTimeout(connectWatchdog);
       if (!window.firebase) {
         updateSyncUI('error', '🔴 Firebase SDK not loaded');
         if (!silent) toast('Firebase script not loaded. Check internet.');
@@ -2938,6 +2942,7 @@
       } else if (config.databaseURL) {
         config.databaseURL = sanitizeUrl(config.databaseURL);
       }
+      currentDbUrl = config.databaseURL;
 
       if (!config || !config.apiKey) {
         updateSyncUI('offline', '⚪ Config Needed');
@@ -2959,6 +2964,43 @@
       currentSyncRoom = cleanKey;
 
       updateSyncUI('syncing', '🟡 Connecting...');
+
+      // 5-second watchdog so UI NEVER hangs in "Connecting..."
+      connectWatchdog = setTimeout(async () => {
+        if (!fbConnected) {
+          try {
+            const testUrl = `${currentDbUrl}/timetables/${cleanKey}.json`;
+            const resp = await fetch(testUrl, { signal: AbortSignal.timeout(3500) });
+            if (resp.ok) {
+              const remoteData = await resp.json();
+              if (remoteData && remoteData.working && remoteData.off) {
+                isRemoteUpdating = true;
+                schedules.working = remoteData.working;
+                schedules.off = remoteData.off;
+                if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+                if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
+                schedules._lastModified = remoteData.lastModified || Date.now();
+                lastSyncTimestamp = Date.now();
+                localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+                save(true);
+                render();
+                setTimeout(() => { isRemoteUpdating = false; }, 300);
+              }
+              fbConnected = true;
+              updateSyncUI('online', '🟢 Live Synced');
+              renderSyncInfo();
+              if (!silent) toast('Connected & Synced ✓');
+              return;
+            } else if (resp.status === 401 || resp.status === 403) {
+              updateSyncUI('error', '🔴 Rules Blocked');
+              if (!silent) toast('Permission denied: Check Realtime Database rules');
+              return;
+            }
+          } catch (_) {}
+          updateSyncUI('error', '🔴 Timeout');
+          if (!silent) toast('Connection timed out. Check Database URL and network.');
+        }
+      }, 5000);
 
       try {
         if (fbApp) {
@@ -2984,10 +3026,11 @@
         // Monitor connection status
         fbDb.ref('.info/connected').on('value', snap => {
           if (snap.val() === true) {
+            clearTimeout(connectWatchdog);
             fbConnected = true;
             updateSyncUI('online', '🟢 Live Synced');
             renderSyncInfo();
-          } else {
+          } else if (fbConnected) {
             updateSyncUI('offline', '⚪ Reconnecting...');
           }
         });
@@ -2995,6 +3038,7 @@
         // Realtime data listener & automatic initialization if room is empty
         let initialDataHandled = false;
         fbRef.on('value', snapshot => {
+          clearTimeout(connectWatchdog);
           const remoteData = snapshot.val();
           if (remoteData && remoteData.working && remoteData.off) {
             if (isRemoteUpdating) return;
@@ -3042,6 +3086,7 @@
             });
           }
         }, err => {
+          clearTimeout(connectWatchdog);
           console.error('Realtime listener notice:', err);
           updateSyncUI('error', '🔴 Rules Blocked');
           toast('Permission denied: Check Realtime Database rules in console');
@@ -3049,6 +3094,7 @@
 
         fbConnected = true;
       } catch(e) {
+        clearTimeout(connectWatchdog);
         console.error('Firebase setup exception:', e);
         updateSyncUI('error', '🔴 Setup Error');
         toast('Firebase error: ' + e.message);
@@ -3056,12 +3102,15 @@
     }
 
     function disconnectFirebase() {
+      clearTimeout(connectWatchdog);
+      clearTimeout(cloudPushTimer);
       if (fbRef) {
         try { fbRef.off(); } catch(_) {}
       }
       fbConnected = false;
       fbRef = null;
       currentSyncRoom = '';
+      currentDbUrl = '';
       lastSyncTimestamp = null;
       localStorage.removeItem(SYNC_KEY_KEY);
       localStorage.removeItem('timetable_fb_db_url');
@@ -3083,9 +3132,9 @@
     }
 
     async function debouncedCloudPush(immediate = false) {
-      if (!fbConnected || isRemoteUpdating || !fbRef) return;
+      if (!fbConnected || isRemoteUpdating || !currentSyncRoom) return;
       clearTimeout(cloudPushTimer);
-      const pushFn = () => {
+      const pushFn = async () => {
         updateSyncUI('syncing', '🟡 Syncing...');
 
         const payload = {
@@ -3096,23 +3145,53 @@
           lastModified: Date.now()
         };
 
-        fbRef.set(payload)
-          .then(() => {
-            schedules._lastModified = payload.lastModified;
-            lastSyncTimestamp = Date.now();
-            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
-            updateSyncUI('online', '🟢 Live Synced');
-            renderSyncInfo();
-          })
-          .catch(err => {
-            console.error('Cloud push error:', err);
-            updateSyncUI('error', '🔴 Push Error');
-            toast('Sync failed: ' + (err.message || 'Check database'));
-          });
+        let pushSuccess = false;
+
+        // 1. Try WebSocket set with 3.5s timeout
+        if (fbRef) {
+          try {
+            await Promise.race([
+              fbRef.set(payload),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('ws_timeout')), 3500))
+            ]);
+            pushSuccess = true;
+          } catch (_) {}
+        }
+
+        // 2. If WebSocket did not confirm within 3.5s, fall back to HTTPS REST PUT immediately
+        if (!pushSuccess && currentDbUrl) {
+          try {
+            const restUrl = `${currentDbUrl}/timetables/${currentSyncRoom}.json`;
+            const resp = await fetch(restUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              signal: AbortSignal.timeout(3500)
+            });
+            if (resp.ok) {
+              pushSuccess = true;
+            } else if (resp.status === 401 || resp.status === 403) {
+              updateSyncUI('error', '🔴 Rules Blocked');
+              toast('Permission denied: Check Realtime Database rules in console');
+              return;
+            }
+          } catch (_) {}
+        }
+
+        if (pushSuccess) {
+          schedules._lastModified = payload.lastModified;
+          lastSyncTimestamp = Date.now();
+          localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+          updateSyncUI('online', '🟢 Live Synced');
+          renderSyncInfo();
+        } else {
+          updateSyncUI('error', '🔴 Sync Timeout');
+          toast('Sync timed out. Check network or database rules.');
+        }
       };
 
       if (immediate) {
-        pushFn();
+        await pushFn();
       } else {
         cloudPushTimer = setTimeout(pushFn, 500);
       }
