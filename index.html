@@ -1385,6 +1385,34 @@
       '#B794F4': 'Personal'
     };
 
+    // Realtime Database forbids several characters in object keys, while the
+    // app uses hex colors (for example, "#FFFFFF") as category-label keys.
+    function encodeCategoryLabelsForFirebase(labels) {
+      const encoded = {};
+      Object.entries(labels || {}).forEach(([key, value]) => {
+        const safeKey = 'k_' + encodeURIComponent(key)
+          .replace(/\./g, '%2E')
+          .replace(/%/g, '~');
+        encoded[safeKey] = value;
+      });
+      return encoded;
+    }
+
+    function decodeCategoryLabelsFromFirebase(labels) {
+      const decoded = {};
+      Object.entries(labels || {}).forEach(([key, value]) => {
+        if (key.startsWith('k_')) {
+          try {
+            decoded[decodeURIComponent(key.slice(2).replace(/~/g, '%'))] = value;
+            return;
+          } catch (_) {}
+        }
+        // Keep compatibility with previously stored keys that were valid RTDB keys.
+        decoded[key] = value;
+      });
+      return decoded;
+    }
+
     const WORKING_COLS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
     const OFF_COLS     = ['Saturday','Sunday'];
     const ALL_DAYS     = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -2977,7 +3005,7 @@
                 isRemoteUpdating = true;
                 schedules.working = remoteData.working;
                 schedules.off = remoteData.off;
-                if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+                if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
                 if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
                 schedules._lastModified = remoteData.lastModified || Date.now();
                 lastSyncTimestamp = Date.now();
@@ -3046,7 +3074,7 @@
 
             schedules.working = remoteData.working;
             schedules.off = remoteData.off;
-            if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
+            if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
             if (remoteData.completed) {
               schedules.completed = normalizeCompleted(remoteData.completed);
             }
@@ -3069,7 +3097,7 @@
             const initPayload = {
               working: JSON.parse(JSON.stringify(schedules.working)),
               off: JSON.parse(JSON.stringify(schedules.off)),
-              categoryLabels: JSON.parse(JSON.stringify(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS)),
+              categoryLabels: encodeCategoryLabelsForFirebase(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS),
               completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
               lastModified: Date.now()
             };
@@ -3139,7 +3167,7 @@
         const payload = {
           working: JSON.parse(JSON.stringify(schedules.working)),
           off: JSON.parse(JSON.stringify(schedules.off)),
-          categoryLabels: JSON.parse(JSON.stringify(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS)),
+          categoryLabels: encodeCategoryLabelsForFirebase(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS),
           completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
           lastModified: Date.now()
         };
@@ -3213,7 +3241,7 @@
             isRemoteUpdating = true;
             schedules.working = data.working;
             schedules.off = data.off;
-            if (data.categoryLabels) schedules.categoryLabels = data.categoryLabels;
+            if (data.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(data.categoryLabels);
             if (data.completed) schedules.completed = normalizeCompleted(data.completed);
             schedules._lastModified = data.lastModified;
             lastSyncTimestamp = Date.now();
