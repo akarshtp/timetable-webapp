@@ -1287,6 +1287,18 @@
           <button class="btn pink" id="btnDisconnectSync" style="display:none; flex:1">Disconnect</button>
         </div>
 
+        <div id="syncLiveInfo" style="display:none; margin-top:.7rem; padding:.55rem .7rem; background:var(--bg-alt); border:2px solid var(--border-c); border-radius:var(--radius);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.3rem;">
+            <span style="font-family:var(--font-mono); font-size:.65rem; color:var(--text-muted);">Active Room:</span>
+            <span id="syncRoomDisplay" style="font-family:var(--font-mono); font-weight:700; font-size:.68rem;">-</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+            <span style="font-family:var(--font-mono); font-size:.65rem; color:var(--text-muted);">Last Synced:</span>
+            <span id="syncLastTimeDisplay" style="font-family:var(--font-mono); font-weight:700; font-size:.68rem; color:var(--accent);">Never</span>
+          </div>
+          <button class="btn sm yellow" id="btnSyncNow" style="width:100%; font-size:.68rem;">🔄 Sync Now</button>
+        </div>
+
         <!-- Advanced toggle for URL/config if needed -->
         <div style="margin-top: .9rem; padding-top: .7rem; border-top: 1.5px dashed var(--border-c);">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1448,10 +1460,11 @@
     let fbApp = null;
     let fbDb = null;
     let fbRef = null;
-    let fbRestUrl = '';
     let fbConnected = false;
     let isRemoteUpdating = false;
     let cloudPushTimer = null;
+    let lastSyncTimestamp = null;
+    let currentSyncRoom = '';
     const FB_CONFIG_KEY = 'timetable_fb_config';
     const SYNC_KEY_KEY = 'timetable_sync_key';
 
@@ -2844,10 +2857,52 @@
       }
     }
 
+    function formatTimeAgo(ts) {
+      if (!ts) return 'Never';
+      const diffSec = Math.floor((Date.now() - ts) / 1000);
+      if (diffSec < 10) return 'Just now';
+      if (diffSec < 60) return `${diffSec}s ago`;
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return `${diffHr}h ago`;
+      const diffDay = Math.floor(diffHr / 24);
+      return `${diffDay}d ago`;
+    }
+
+    function renderSyncInfo() {
+      const infoCard = document.getElementById('syncLiveInfo');
+      const roomSpan = document.getElementById('syncRoomDisplay');
+      const timeSpan = document.getElementById('syncLastTimeDisplay');
+      const tbBtn = document.getElementById('btnToolbarSync');
+
+      if (!fbConnected) {
+        if (infoCard) infoCard.style.display = 'none';
+        return;
+      }
+      if (infoCard) infoCard.style.display = 'block';
+      if (roomSpan) roomSpan.textContent = currentSyncRoom || 'default';
+      const timeAgo = formatTimeAgo(lastSyncTimestamp);
+      if (timeSpan) timeSpan.textContent = timeAgo;
+      if (tbBtn && fbConnected) {
+        tbBtn.title = `Room: ${currentSyncRoom} · Last sync: ${timeAgo}`;
+      }
+    }
+
     function initFirebaseSync() {
       const savedConfig = localStorage.getItem(FB_CONFIG_KEY) || '';
       const savedKey = localStorage.getItem(SYNC_KEY_KEY);
       const savedDbUrl = localStorage.getItem('timetable_fb_db_url') || DEFAULT_PRECONFIG.databaseURL;
+      const lastSync = localStorage.getItem('timetable_last_sync');
+      if (lastSync) lastSyncTimestamp = parseInt(lastSync, 10) || null;
+
+      const passInp = document.getElementById('syncPassphrase');
+      const cfgInp = document.getElementById('fbConfigText');
+      const urlInp = document.getElementById('fbDatabaseUrl');
+      if (passInp && savedKey) passInp.value = savedKey;
+      if (cfgInp && savedConfig) cfgInp.value = savedConfig;
+      if (urlInp && savedDbUrl) urlInp.value = savedDbUrl;
+
       if (savedKey) {
         connectFirebase(savedConfig, savedKey, savedDbUrl, true);
       } else {
@@ -2894,58 +2949,17 @@
         return;
       }
 
-      // Sanitize passphrase: replace spaces and special chars with underscores
+      // Preserve exact case as entered by user, stripping only forbidden Firebase RTDB path characters: . # $ [ ] /
       const cleanKey = passphrase.trim().replace(/[\s.#$\[\]/]/g, '_').replace(/_+/g, '_');
       if (!cleanKey) {
         updateSyncUI('error', '🔴 Key Required');
         if (!silent) toast('Please enter a private sync passphrase');
         return;
       }
+      currentSyncRoom = cleanKey;
 
-      // ─── Step 1: Direct HTTPS REST Connect & Instant Data Sync ───
-      fbRestUrl = config.databaseURL + '/timetables/' + cleanKey + '.json';
       updateSyncUI('syncing', '🟡 Connecting...');
-      try {
-        const resp = await fetch(fbRestUrl, { signal: AbortSignal.timeout(6000) });
-        if (resp.ok) {
-          const remoteData = await resp.json();
-          if (remoteData && remoteData.working && remoteData.off) {
-            isRemoteUpdating = true;
-            schedules.working = remoteData.working;
-            schedules.off = remoteData.off;
-            if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
-            if (remoteData.completed) {
-              schedules.completed = normalizeCompleted(remoteData.completed);
-            }
-            save(true);
-            render();
-            setTimeout(() => { isRemoteUpdating = false; }, 300);
-          } else {
-            // Room is empty on cloud: upload current schedule via REST
-            await fetch(fbRestUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                working: schedules.working,
-                off: schedules.off,
-                categoryLabels: schedules.categoryLabels,
-                completed: schedules.completed || { date: getTodayDateStr(), keys: [] },
-                lastModified: Date.now()
-              })
-            });
-          }
-          updateSyncUI('online', '🟢 Live Synced');
-          if (!silent) toast('Connected & Synced ✓');
-        } else if (resp.status === 401 || resp.status === 403) {
-          updateSyncUI('error', '🔴 Rules Blocked');
-          if (!silent) toast('Permission denied: Check Realtime Database rules in console');
-          return;
-        }
-      } catch(fetchErr) {
-        console.warn('Initial REST sync:', fetchErr);
-      }
 
-      // ─── Step 2: Initialize Firebase Real-Time Listener ───
       try {
         if (fbApp) {
           try { fbApp.delete(); } catch(_) {}
@@ -2967,12 +2981,19 @@
         if (btnConnect) btnConnect.style.display = 'none';
         if (btnDisconnect) btnDisconnect.style.display = '';
 
+        // Monitor connection status
         fbDb.ref('.info/connected').on('value', snap => {
           if (snap.val() === true) {
+            fbConnected = true;
             updateSyncUI('online', '🟢 Live Synced');
+            renderSyncInfo();
+          } else {
+            updateSyncUI('offline', '⚪ Reconnecting...');
           }
         });
 
+        // Realtime data listener & automatic initialization if room is empty
+        let initialDataHandled = false;
         fbRef.on('value', snapshot => {
           const remoteData = snapshot.val();
           if (remoteData && remoteData.working && remoteData.off) {
@@ -2985,20 +3006,52 @@
             if (remoteData.completed) {
               schedules.completed = normalizeCompleted(remoteData.completed);
             }
+            schedules._lastModified = remoteData.lastModified || Date.now();
+            lastSyncTimestamp = Date.now();
+            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
 
             save(true);
             render();
             updateSyncUI('online', '🟢 Live Synced');
+            renderSyncInfo();
+            if (!initialDataHandled && !silent) {
+              toast(`Connected to room "${cleanKey}" ✓`);
+            }
+            initialDataHandled = true;
             setTimeout(() => { isRemoteUpdating = false; }, 300);
+          } else if (remoteData === null) {
+            // Room is empty or newly created: upload local timetable right now to initialize it in Firebase
+            initialDataHandled = true;
+            const initPayload = {
+              working: JSON.parse(JSON.stringify(schedules.working)),
+              off: JSON.parse(JSON.stringify(schedules.off)),
+              categoryLabels: JSON.parse(JSON.stringify(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS)),
+              completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
+              lastModified: Date.now()
+            };
+            fbRef.set(initPayload).then(() => {
+              lastSyncTimestamp = Date.now();
+              localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+              updateSyncUI('online', '🟢 Live Synced');
+              renderSyncInfo();
+              if (!silent) toast(`Room "${cleanKey}" created & uploaded! ✓`);
+            }).catch(err => {
+              console.error('Initial room creation error:', err);
+              updateSyncUI('error', '🔴 Rules Blocked');
+              toast('Database write error: ' + (err.message || 'Permission denied'));
+            });
           }
         }, err => {
-          console.warn('Realtime listener notice:', err);
+          console.error('Realtime listener notice:', err);
+          updateSyncUI('error', '🔴 Rules Blocked');
+          toast('Permission denied: Check Realtime Database rules in console');
         });
 
         fbConnected = true;
       } catch(e) {
-        console.error(e);
-        updateSyncUI('online', '🟢 Live Synced (REST)');
+        console.error('Firebase setup exception:', e);
+        updateSyncUI('error', '🔴 Setup Error');
+        toast('Firebase error: ' + e.message);
       }
     }
 
@@ -3008,9 +3061,11 @@
       }
       fbConnected = false;
       fbRef = null;
-      fbRestUrl = '';
+      currentSyncRoom = '';
+      lastSyncTimestamp = null;
       localStorage.removeItem(SYNC_KEY_KEY);
       localStorage.removeItem('timetable_fb_db_url');
+      localStorage.removeItem('timetable_last_sync');
 
       const passInp = document.getElementById('syncPassphrase');
       if (passInp) passInp.value = '';
@@ -3020,85 +3075,74 @@
       if (btnConnect) btnConnect.style.display = '';
       if (btnDisconnect) btnDisconnect.style.display = 'none';
 
+      const infoCard = document.getElementById('syncLiveInfo');
+      if (infoCard) infoCard.style.display = 'none';
+
       updateSyncUI('offline', '⚪ Not Connected');
       toast('Disconnected from Cloud Sync');
     }
 
     async function debouncedCloudPush(immediate = false) {
-      if (!fbConnected || isRemoteUpdating) return;
+      if (!fbConnected || isRemoteUpdating || !fbRef) return;
       clearTimeout(cloudPushTimer);
-      const pushFn = async () => {
+      const pushFn = () => {
         updateSyncUI('syncing', '🟡 Syncing...');
 
         const payload = {
-          working: schedules.working,
-          off: schedules.off,
-          categoryLabels: schedules.categoryLabels,
-          completed: schedules.completed || { date: getTodayDateStr(), keys: [] },
+          working: JSON.parse(JSON.stringify(schedules.working)),
+          off: JSON.parse(JSON.stringify(schedules.off)),
+          categoryLabels: JSON.parse(JSON.stringify(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS)),
+          completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
           lastModified: Date.now()
         };
 
-        // 1. Try WebSocket set for instant peer notification
-        if (fbRef) {
-          try { fbRef.set(payload).catch(() => {}); } catch (_) {}
-        }
-
-        // 2. Instant HTTPS REST PUT for 100% guarantee on all networks
-        if (fbRestUrl) {
-          try {
-            const resp = await fetch(fbRestUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (resp.ok) {
-              updateSyncUI('online', '🟢 Live Synced');
-              return;
-            } else if (resp.status === 401 || resp.status === 403) {
-              updateSyncUI('error', '🔴 Rules Blocked');
-              toast('Permission denied: Check Realtime Database rules');
-              return;
-            }
-          } catch (e) {
-            console.warn('REST push notice:', e);
-          }
-        }
-
-        schedules._lastModified = payload.lastModified;
-        updateSyncUI('online', '🟢 Live Synced');
+        fbRef.set(payload)
+          .then(() => {
+            schedules._lastModified = payload.lastModified;
+            lastSyncTimestamp = Date.now();
+            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+            updateSyncUI('online', '🟢 Live Synced');
+            renderSyncInfo();
+          })
+          .catch(err => {
+            console.error('Cloud push error:', err);
+            updateSyncUI('error', '🔴 Push Error');
+            toast('Sync failed: ' + (err.message || 'Check database'));
+          });
       };
 
       if (immediate) {
-        await pushFn();
+        pushFn();
       } else {
-        cloudPushTimer = setTimeout(pushFn, 600);
+        cloudPushTimer = setTimeout(pushFn, 500);
       }
     }
 
-    // Background 4-Second Auto-Sync Poller (keeps mobile and desktop in lockstep)
-    setInterval(async () => {
-      if (!fbConnected || isRemoteUpdating || !fbRestUrl) return;
-      try {
-        const resp = await fetch(fbRestUrl);
-        if (resp.ok) {
-          const remoteData = await resp.json();
-          if (remoteData && remoteData.working && remoteData.off && remoteData.lastModified) {
-            const currentMod = schedules._lastModified || 0;
-            if (remoteData.lastModified > currentMod) {
-              isRemoteUpdating = true;
-              schedules.working = remoteData.working;
-              schedules.off = remoteData.off;
-              if (remoteData.categoryLabels) schedules.categoryLabels = remoteData.categoryLabels;
-              if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
-              schedules._lastModified = remoteData.lastModified;
-              save(true);
-              render();
-              setTimeout(() => { isRemoteUpdating = false; }, 300);
-            }
+    // Refresh "Last Synced: Xm ago" relative timestamp every 30 seconds
+    setInterval(renderSyncInfo, 30000);
+
+    // When returning to tab or unlocking mobile, pull any updates immediately
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && fbConnected && fbRef) {
+        fbRef.once('value').then(snap => {
+          const data = snap.val();
+          if (data && data.working && data.off && data.lastModified > (schedules._lastModified || 0)) {
+            isRemoteUpdating = true;
+            schedules.working = data.working;
+            schedules.off = data.off;
+            if (data.categoryLabels) schedules.categoryLabels = data.categoryLabels;
+            if (data.completed) schedules.completed = normalizeCompleted(data.completed);
+            schedules._lastModified = data.lastModified;
+            lastSyncTimestamp = Date.now();
+            localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
+            save(true);
+            render();
+            renderSyncInfo();
+            setTimeout(() => { isRemoteUpdating = false; }, 300);
           }
-        }
-      } catch (_) {}
-    }, 4000);
+        }).catch(() => {});
+      }
+    });
 
     // Direct Share Link Generation & URL Import
     function generateShareLink() {
@@ -3149,6 +3193,18 @@
 
     document.getElementById('btnDisconnectSync').addEventListener('click', disconnectFirebase);
     document.getElementById('btnShareLink').addEventListener('click', generateShareLink);
+
+    const btnSyncNow = document.getElementById('btnSyncNow');
+    if (btnSyncNow) {
+      btnSyncNow.addEventListener('click', () => {
+        if (!fbConnected || !fbRef) {
+          toast('Not connected to cloud sync');
+          return;
+        }
+        toast('Syncing now...');
+        debouncedCloudPush(true);
+      });
+    }
 
     document.getElementById('toggleFbConfig').addEventListener('click', () => {
       const sec = document.getElementById('fbConfigSection');
