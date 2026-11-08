@@ -82,7 +82,7 @@
        APP SHELL
        ═══════════════════════════════════════════════════════ */
     .app {
-      max-width: 1100px;
+      max-width: 1500px;
       margin: 0 auto;
       padding: 1.2rem 1rem 6rem;
     }
@@ -157,6 +157,11 @@
       align-items: center;
       gap: .6rem;
       margin-bottom: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: .55rem .25rem;
+      background: var(--bg);
     }
     .toggle {
       display: inline-flex;
@@ -349,8 +354,10 @@
     .grid-wrap.fading { opacity: 0; }
 
     .grid-scroll {
-      overflow-x: auto;
+      overflow: auto;
+      max-height: 72dvh;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       border: var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
@@ -1080,11 +1087,15 @@
       .app { padding: .5rem; max-width: 100%; }
       .header { margin-bottom: .5rem; }
       .header h1 { font-size: 1.3rem; }
-      .header p::after {
+      .header::after {
         content: ' · Printed ' attr(data-print-date);
+        display: block;
+        font-family: var(--font-mono);
+        font-size: .65rem;
       }
       .grid-scroll {
         overflow: visible;
+        max-height: none;
         box-shadow: none;
         border: 2px solid #000;
       }
@@ -1113,6 +1124,8 @@
       .modal { padding: 1.1rem .9rem 1.5rem; }
       .action-pill { bottom: .8rem; }
       .toggle button { padding: .45rem .9rem; font-size: .7rem; }
+      .toggle-wrap { gap: .4rem; }
+      .grid-scroll { max-height: 68dvh; }
     }
   </style>
 </head>
@@ -1125,7 +1138,6 @@
     <!-- Header -->
     <header class="header">
       <h1><span class="brand">⏰ Timetable</span> Planner</h1>
-      <p id="headerSub">tap to select · long‑press to edit · saved locally</p>
       <div class="header-actions">
         <button class="icon-btn" id="btnTheme" title="Toggle Dark Mode">☀️</button>
         <button class="icon-btn" id="btnGear" title="Settings">⚙️</button>
@@ -3382,8 +3394,7 @@
        PRINT SUPPORT
        ════════════════════════════════════════════════════════ */
     window.addEventListener('beforeprint', () => {
-      const sub = document.getElementById('headerSub');
-      sub.dataset.printDate = new Date().toLocaleDateString();
+      document.querySelector('.header').dataset.printDate = new Date().toLocaleDateString();
     });
 
     /* ════════════════════════════════════════════════════════
