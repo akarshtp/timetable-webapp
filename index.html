@@ -1158,6 +1158,7 @@
     <div class="toolbar" id="toolbar">
       <button class="btn sm" id="btnUndo" disabled>↩ Undo</button>
       <button class="btn sm" id="btnRedo" disabled>↪ Redo</button>
+      <button class="btn sm green" id="btnJustStart">▶ Just start · 5m</button>
       <div class="today-progress" id="todayProgress" style="display:none"></div>
       <button class="btn sm sync-btn-toolbar" id="btnToolbarSync" title="Cloud Sync Status">☁️ Sync</button>
     </div>
@@ -1188,6 +1189,8 @@
     <span class="pill-divider"></span>
     <button class="btn sm yellow" id="pillEdit">✏️ Edit</button>
     <button class="btn sm lilac" id="pillFocus">⏱️ Focus</button>
+    <button class="btn sm blue" id="pillMoveToday" style="display:none">↪ Move today</button>
+    <button class="btn sm pink" id="pillSkipToday" style="display:none">Skip today</button>
     <button class="btn sm green" id="pillCopy">📋 Copy</button>
     <button class="btn sm lilac" id="pillPaste" style="display:none">📌 Paste</button>
     <button class="btn sm blue" id="pillBulk">☑ Multi</button>
@@ -1466,7 +1469,8 @@
       working: { times: [...DEFAULT_WORKING_TIMES], cells: {} },
       off:     { times: [...DEFAULT_OFF_TIMES],     cells: {} },
       categoryLabels: { ...DEFAULT_CATEGORY_LABELS },
-      completed: { date: '', keys: [] }
+      completed: { date: '', keys: [] },
+      dayPlan: { date: '', skipped: [], moved: {} }
     };
 
     // Selection state
@@ -1550,6 +1554,17 @@
       return { date: comp.date, keys: k };
     }
 
+    function normalizeDayPlan(plan) {
+      if (!plan || plan.date !== getTodayDateStr()) {
+        return { date: getTodayDateStr(), skipped: [], moved: {} };
+      }
+      return {
+        date: plan.date,
+        skipped: Array.isArray(plan.skipped) ? plan.skipped : [],
+        moved: plan.moved && typeof plan.moved === 'object' ? plan.moved : {}
+      };
+    }
+
     function save(skipCloudSync = false) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); } catch(_) {}
       if (!skipCloudSync) {
@@ -1575,9 +1590,11 @@
           if (parsed.completed) {
             schedules.completed = normalizeCompleted(parsed.completed);
           }
+          schedules.dayPlan = normalizeDayPlan(parsed.dayPlan);
         }
       } catch(_) {}
       schedules.completed = normalizeCompleted(schedules.completed);
+      schedules.dayPlan = normalizeDayPlan(schedules.dayPlan);
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1695,10 +1712,13 @@
       let totalTasks = 0;
       let doneTasks = 0;
       const completedKeys = normalizeCompleted(schedules.completed).keys;
+      const dayPlan = normalizeDayPlan(schedules.dayPlan);
 
       targetSched.times.forEach(t => {
         const k = cellKey(todayName, t);
-        if (targetSched.cells[k] && targetSched.cells[k].title) {
+        if (dayPlan.skipped.includes(k) || Object.prototype.hasOwnProperty.call(dayPlan.moved, k)) return;
+        const movedSource = Object.keys(dayPlan.moved).find(sourceKey => dayPlan.moved[sourceKey] === k);
+        if (targetSched.cells[movedSource || k] && targetSched.cells[movedSource || k].title) {
           totalTasks++;
           if (completedKeys.includes(k)) doneTasks++;
         }
@@ -1714,6 +1734,83 @@
       el.innerHTML = `<span>✓ ${doneTasks}/${totalTasks}</span><span class="today-progress-fill"><span class="today-progress-bar" style="width:${pct}%"></span></span>`;
       el.title = `Today's Progress: ${doneTasks} of ${totalTasks} completed (${pct}%)`;
     }
+
+    function startJustStart() {
+      const todayCol = ALL_DAYS[new Date().getDay()];
+      if (!todayCol) return;
+      const view = todayCol === 'Saturday' || todayCol === 'Sunday' ? 'off' : 'working';
+      const sched = schedules[view];
+      const plan = normalizeDayPlan(schedules.dayPlan);
+      const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+      const eligible = time => {
+        const key = cellKey(todayCol, time);
+        const movedSource = Object.keys(plan.moved).find(sourceKey => plan.moved[sourceKey] === key);
+        if (plan.skipped.includes(key) || Object.prototype.hasOwnProperty.call(plan.moved, key)) return false;
+        return !!(sched.cells[movedSource || key] || {}).title;
+      };
+      const targetTime = (nowCol === todayCol && nowTime && eligible(nowTime) ? nowTime : null) ||
+        sched.times.find(time => timeToMinutes(time) > nowMins && eligible(time));
+      if (!targetTime) {
+        toast('No activity coming up today');
+        return;
+      }
+      currentView = view;
+      document.querySelectorAll('.toggle button').forEach(btn => {
+        const active = btn.dataset.view === view;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active);
+      });
+      openFocusTimer(todayCol, targetTime);
+      setTimerMode('5');
+      startTimer();
+    }
+
+    document.getElementById('btnJustStart').addEventListener('click', startJustStart);
+
+    function rescheduleSelectedToday(skip) {
+      if (!selectedCol || !selectedTime || selectedCol !== ALL_DAYS[new Date().getDay()]) return;
+      const view = selectedCol === 'Saturday' || selectedCol === 'Sunday' ? 'off' : 'working';
+      const sched = schedules[view];
+      const sourceKey = cellKey(selectedCol, selectedTime);
+      const source = sched.cells[sourceKey];
+      if (!source || !source.title) return;
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const sourceIndex = sched.times.indexOf(selectedTime);
+      const sourceEnd = sched.times[sourceIndex + 1] ? timeToMinutes(sched.times[sourceIndex + 1]) : timeToMinutes(selectedTime) + 60;
+      if (sourceEnd > nowMins) {
+        toast('This activity has not been missed yet');
+        return;
+      }
+
+      const plan = normalizeDayPlan(schedules.dayPlan);
+      if (skip) {
+        if (!plan.skipped.includes(sourceKey)) plan.skipped.push(sourceKey);
+        delete plan.moved[sourceKey];
+        toast('Skipped for today');
+      } else {
+        const occupied = new Set([...Object.values(plan.moved), ...plan.skipped]);
+        const destinationTime = sched.times.find(time =>
+          timeToMinutes(time) >= now.getHours() * 60 + now.getMinutes() &&
+          !(sched.cells[cellKey(selectedCol, time)] || {}).title &&
+          !occupied.has(cellKey(selectedCol, time))
+        );
+        if (!destinationTime) {
+          toast('No open time slot left today');
+          return;
+        }
+        plan.skipped = plan.skipped.filter(key => key !== sourceKey);
+        plan.moved[sourceKey] = cellKey(selectedCol, destinationTime);
+        toast(`Moved to ${fmt12(destinationTime)}`);
+      }
+      pushUndo();
+      schedules.dayPlan = plan;
+      save();
+      render();
+    }
+
+    document.getElementById('pillMoveToday').addEventListener('click', () => rescheduleSelectedToday(false));
+    document.getElementById('pillSkipToday').addEventListener('click', () => rescheduleSelectedToday(true));
 
     function playChime(freq = 587.33, dur = 0.5) {
       try {
@@ -1785,7 +1882,12 @@
 
         cols.forEach(col => {
           const key = cellKey(col, time);
-          const data = sched.cells[key] || {};
+          const planApplies = col === ALL_DAYS[new Date().getDay()] &&
+            currentView === ((col === 'Saturday' || col === 'Sunday') ? 'off' : 'working');
+          const dayPlan = planApplies ? normalizeDayPlan(schedules.dayPlan) : { skipped: [], moved: {} };
+          const movedSource = Object.keys(dayPlan.moved).find(sourceKey => dayPlan.moved[sourceKey] === key);
+          const hiddenForToday = dayPlan.skipped.includes(key) || Object.prototype.hasOwnProperty.call(dayPlan.moved, key);
+          const data = hiddenForToday ? {} : (sched.cells[movedSource || key] || {});
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.style.background = data.color || '#FFFFFF';
@@ -1949,6 +2051,8 @@
       const bulkBtn = document.getElementById('pillBulk');
       const editBtn = document.getElementById('pillEdit');
       const focusBtn = document.getElementById('pillFocus');
+      const moveTodayBtn = document.getElementById('pillMoveToday');
+      const skipTodayBtn = document.getElementById('pillSkipToday');
 
       if (bulkMode) {
         pill.classList.add('show');
@@ -1956,6 +2060,8 @@
         editBtn.textContent = '✏️ Apply';
         editBtn.style.display = '';
         if (focusBtn) focusBtn.style.display = 'none';
+        moveTodayBtn.style.display = 'none';
+        skipTodayBtn.style.display = 'none';
         copyBtn.style.display = 'none';
         pasteBtn.style.display = 'none';
         bulkBtn.textContent = '✓ Done';
@@ -1976,10 +2082,25 @@
         bulkBtn.textContent = '☑ Multi';
         bulkBtn.style.display = '';
 
+        const todayCol = ALL_DAYS[new Date().getDay()];
+        const isTodaySlot = selectedCol === todayCol && currentView === ((todayCol === 'Saturday' || todayCol === 'Sunday') ? 'off' : 'working');
+        const selectedData = sched.cells[cellKey(selectedCol, selectedTime)] || {};
+        const selectedIndex = sched.times.indexOf(selectedTime);
+        const selectedEnd = sched.times[selectedIndex + 1] ? timeToMinutes(sched.times[selectedIndex + 1]) : timeToMinutes(selectedTime) + 60;
+        const isMissed = isTodaySlot && selectedData.title && selectedEnd <= new Date().getHours() * 60 + new Date().getMinutes();
+        const alreadyDone = normalizeCompleted(schedules.completed).keys.includes(cellKey(selectedCol, selectedTime));
+        const plan = normalizeDayPlan(schedules.dayPlan);
+        const adjusted = plan.skipped.includes(cellKey(selectedCol, selectedTime)) ||
+          Object.prototype.hasOwnProperty.call(plan.moved, cellKey(selectedCol, selectedTime));
+        moveTodayBtn.style.display = isMissed && !adjusted && !alreadyDone ? '' : 'none';
+        skipTodayBtn.style.display = isMissed && !adjusted && !alreadyDone ? '' : 'none';
+
         if (pasteMode) {
           info.textContent = '📌 Paste mode — tap a cell';
         }
       } else {
+        moveTodayBtn.style.display = 'none';
+        skipTodayBtn.style.display = 'none';
         pill.classList.remove('show');
       }
     }
@@ -2598,6 +2719,7 @@
         schedules.working = parsed.working;
         schedules.off = parsed.off;
         if (parsed.categoryLabels) schedules.categoryLabels = parsed.categoryLabels;
+        if (parsed.dayPlan) schedules.dayPlan = normalizeDayPlan(parsed.dayPlan);
         save();
         renderSlotList();
         render();
@@ -2715,7 +2837,11 @@
       if (timerTargetCol && timerTargetTime) {
         const sched = getSched();
         const k = cellKey(timerTargetCol, timerTargetTime);
-        const data = (sched.cells && sched.cells[k]) || {};
+        const planApplies = timerTargetCol === ALL_DAYS[new Date().getDay()] &&
+          currentView === ((timerTargetCol === 'Saturday' || timerTargetCol === 'Sunday') ? 'off' : 'working');
+        const dayPlan = planApplies ? normalizeDayPlan(schedules.dayPlan) : { moved: {}, skipped: [] };
+        const movedSource = Object.keys(dayPlan.moved).find(sourceKey => dayPlan.moved[sourceKey] === k);
+        const data = (sched.cells && sched.cells[movedSource || k]) || {};
         const idx = sched.times.indexOf(timerTargetTime);
         const next = sched.times[idx + 1] || null;
         const title = data.title || 'Focus Session';
@@ -2976,6 +3102,7 @@
       schedules.off = remoteData.off;
       if (remoteData.categoryLabels) schedules.categoryLabels = decodeCategoryLabelsFromFirebase(remoteData.categoryLabels);
       if (remoteData.completed) schedules.completed = normalizeCompleted(remoteData.completed);
+      schedules.dayPlan = normalizeDayPlan(remoteData.dayPlan);
       schedules._lastModified = remoteData.lastModified || Date.now();
       lastSyncTimestamp = Date.now();
       localStorage.setItem('timetable_last_sync', String(lastSyncTimestamp));
@@ -3156,6 +3283,7 @@
               off: JSON.parse(JSON.stringify(schedules.off)),
               categoryLabels: encodeCategoryLabelsForFirebase(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS),
               completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
+              dayPlan: JSON.parse(JSON.stringify(normalizeDayPlan(schedules.dayPlan))),
               lastModified: Date.now()
             };
             pendingLocalWriteTimestamp = initPayload.lastModified;
@@ -3232,6 +3360,7 @@
           off: JSON.parse(JSON.stringify(schedules.off)),
           categoryLabels: encodeCategoryLabelsForFirebase(schedules.categoryLabels || DEFAULT_CATEGORY_LABELS),
           completed: JSON.parse(JSON.stringify(schedules.completed || { date: getTodayDateStr(), keys: [] })),
+          dayPlan: JSON.parse(JSON.stringify(normalizeDayPlan(schedules.dayPlan))),
           lastModified: Date.now()
         };
         const pushEditVersion = localEditVersion;
