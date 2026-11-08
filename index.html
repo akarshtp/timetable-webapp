@@ -484,6 +484,22 @@
       background: var(--cyan);
       color: #000;
     }
+    [data-theme="dark"] .grid .cell:not(.hdr):not(.hdr-corner):not(.time-col) {
+      color: #000;
+    }
+    [data-theme="dark"] .grid .cell:not(.hdr):not(.hdr-corner):not(.time-col) .cell-sub {
+      color: #333;
+    }
+    [data-theme="dark"] .grid .cell.is-done .cell-title {
+      color: #333;
+    }
+    [data-theme="dark"] .cell-check {
+      color: #000;
+    }
+    [data-theme="dark"] #actionPill #pillDeselect {
+      background: #fff;
+      color: #000;
+    }
 
     /* ── Done / Check-off cell ──────────────────────────── */
     .cell.is-done {
